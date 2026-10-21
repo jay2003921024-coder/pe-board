@@ -1,0 +1,1602 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>體育教案圖板</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@400;500;700&display=swap">
+<style>
+/* Layout: three-column workbench (tool rack | court | lesson notes) that folds to a single column on phones */
+:root{
+  --bg:#edf1f0; --surface:#ffffff; --surface-2:#f5f8f7; --ink:#16232a; --muted:#5a6a70;
+  --line:#d3dcda; --accent:#1f5fbf; --accent-ink:#ffffff; --accent-soft:#e3ecfa;
+  --mark:#f2c230; --stage:#dde4e2; --danger:#c2362e;
+  --display:"LXGW WenKai TC","Kaiti TC","STKaiti",serif;
+  --body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#10171a; --surface:#172126; --surface-2:#1c282e; --ink:#e4ebe9; --muted:#93a4a8;
+  --line:#2a3a40; --accent:#77a3f2; --accent-ink:#0c1422; --accent-soft:#1d2d47;
+  --mark:#f2c230; --stage:#0b1113; --danger:#f0756c; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#10171a; --surface:#172126; --surface-2:#1c282e; --ink:#e4ebe9; --muted:#93a4a8;
+  --line:#2a3a40; --accent:#77a3f2; --accent-ink:#0c1422; --accent-soft:#1d2d47;
+  --mark:#f2c230; --stage:#0b1113; --danger:#f0756c; color-scheme:dark;
+}
+/* Same basics the Claude page wrapper adds, so the file also works when opened directly in a browser */
+[hidden]{display:none!important}
+html,body{margin:0}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:14px;line-height:1.5}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.app{max-width:1520px;margin:0 auto;padding-block:14px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.top{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;margin-bottom:14px}
+.brand{font-family:var(--display);font-size:26px;font-weight:700;letter-spacing:.04em;white-space:nowrap;display:flex;align-items:center;gap:8px}
+.brand svg{flex:none}
+.title-in{flex:1 1 240px;min-width:0;font-family:var(--display);font-size:20px;padding:6px 10px;border:1px solid transparent;border-radius:8px;background:transparent}
+.title-in:hover{border-color:var(--line)}
+.title-in:focus{border-color:var(--accent);background:var(--surface);outline:none}
+.top select{padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;border:1px solid var(--line);background:var(--surface);font-weight:500;white-space:nowrap}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.small{padding:4px 10px;font-size:13px}
+.btn.danger{color:var(--danger)}
+.btn:disabled{opacity:.4;cursor:default}
+
+.work{display:grid;grid-template-columns:196px minmax(0,1fr) 290px;gap:14px;align-items:start}
+
+/* Tool rack */
+.tools{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:14px}
+.tg h3{margin:0 0 6px;font-size:11px;font-weight:700;letter-spacing:.12em;color:var(--muted)}
+.tg-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.tool{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px 5px;border:1px solid transparent;border-radius:8px;background:transparent;font-size:12px;line-height:1.2}
+.tool svg{width:30px;height:30px}
+.tool{position:relative}
+.tkey{position:absolute;top:3px;right:4px;font-family:var(--body);font-size:9px;line-height:1;padding:2px 3px;border-radius:3px;border:1px solid var(--line);color:var(--muted);background:var(--surface)}
+.tool.wide .tkey{position:static;order:3}
+.size-row{flex-wrap:nowrap}
+.size-row input[type=range]{flex:1;min-width:0;accent-color:var(--accent)}
+.size-row input[type=number]{width:58px;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--surface-2)}
+.tool:hover{background:var(--surface-2)}
+.tool[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);font-weight:700}
+.tool.wide{grid-column:1 / -1;flex-direction:row;justify-content:center;gap:8px;padding:8px}
+.tool.wide svg{width:20px;height:20px}
+.swatches{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.sw{width:24px;height:24px;border-radius:50%;border:2px solid var(--line);padding:0}
+.sw[aria-pressed="true"]{border-color:var(--ink);box-shadow:0 0 0 2px var(--surface) inset}
+.sw-label{font-size:11px;color:var(--muted);margin-top:6px}
+
+/* Stage */
+.stage{min-width:0;display:flex;flex-direction:column;gap:10px}
+.stage-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.stage-bar select{padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-weight:500;max-width:100%}
+.steps{display:flex;gap:4px;overflow-x:auto;flex:1 1 200px;min-width:0;padding:2px}
+.step-tab{flex:none;padding:5px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);font-size:13px;white-space:nowrap;max-width:200px;overflow:hidden;text-overflow:ellipsis}
+.step-tab b{font-variant-numeric:tabular-nums;margin-right:4px}
+.step-tab[aria-current="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.step-add{flex:none;padding:5px 12px;border-radius:999px;border:1px dashed var(--muted);background:transparent;font-size:13px;color:var(--muted)}
+.step-add:hover{color:var(--accent);border-color:var(--accent)}
+.history{display:flex;gap:4px}
+.play{display:flex;gap:4px;align-items:center}
+.play select{padding:4px 6px;font-size:13px}
+#btnPlay[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+#board.animating{cursor:pointer}
+.icon-btn{width:34px;height:32px;border-radius:8px;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center;padding:0}
+.icon-btn:disabled{opacity:.35;cursor:default}
+.icon-btn svg{width:18px;height:18px}
+.canvas-wrap{background:var(--stage);border-radius:12px;padding:10px;display:flex;justify-content:center}
+#board{display:block;width:100%;height:auto;max-height:74vh;touch-action:none;user-select:none;-webkit-user-select:none;border-radius:6px}
+#board.placing{cursor:crosshair}
+#board .it,#board [data-id]{cursor:move}
+#board.placing [data-id]{cursor:crosshair}
+#board [data-handle]{cursor:grab}
+.hint{font-size:13px;color:var(--muted);min-height:20px}
+.hint kbd,.empty kbd{font-family:var(--body);font-size:11px;padding:1px 5px;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;background:var(--surface)}
+
+/* Notes panel */
+.panel{display:flex;flex-direction:column;gap:14px;min-width:0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;min-width:0}
+.card h2{margin:0 0 10px;font-family:var(--display);font-size:18px;font-weight:700;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.card h2 small{font-family:var(--body);font-size:12px;font-weight:400;color:var(--muted)}
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+.field:last-child{margin-bottom:0}
+.field label{font-size:12px;font-weight:500;color:var(--muted)}
+.field input[type=text],.field textarea{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2)}
+.field input[type=text]:focus,.field textarea:focus{border-color:var(--accent);outline:none;background:var(--surface)}
+.field textarea{min-height:110px;resize:vertical;line-height:1.6}
+.field input[type=range]{width:100%;accent-color:var(--accent)}
+.row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:var(--surface);padding:5px 10px;font-size:13px}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.prop-head{display:flex;align-items:center;gap:8px;font-weight:700;margin-bottom:10px}
+.prop-head svg{width:26px;height:26px}
+.empty{margin:0;color:var(--muted);font-size:13px;line-height:1.9}
+
+/* Modals */
+.modal{position:fixed;inset:0;background:rgba(8,14,16,.55);display:grid;place-items:center;z-index:20;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.modal-card{background:var(--surface);border-radius:14px;width:min(920px,100%);max-height:100%;overflow:auto;padding:18px;display:flex;flex-direction:column;gap:12px}
+.modal-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.modal-head h2{margin:0;font-family:var(--display);font-size:22px}
+.exp-img{width:100%;height:auto;border:1px solid var(--line);border-radius:8px;background:#fff;display:block}
+.exp-msg{font-size:13px;color:var(--muted);margin:0}
+.modal-card.wide{width:min(1120px,100%)}
+.modal-card.narrow{width:min(440px,100%)}
+.modal-card select{padding:6px 9px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2)}
+.lib{display:grid;grid-template-columns:190px minmax(0,1fr);gap:16px;min-height:440px}
+.lib-nav{display:flex;flex-direction:column;gap:2px;border-right:1px solid var(--line);padding-right:12px;min-width:0}
+.nav-btn{display:flex;justify-content:space-between;gap:8px;text-align:left;padding:6px 10px;border-radius:8px;border:0;background:transparent;font-size:14px}
+.nav-btn span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nav-btn small{color:var(--muted);font-variant-numeric:tabular-nums}
+.nav-btn:hover{background:var(--surface-2)}
+.nav-btn[aria-current="true"]{background:var(--accent-soft);color:var(--accent);font-weight:700}
+.nav-btn.sub{padding-left:22px}
+.nav-btn.add{color:var(--muted);font-size:13px}
+.nav-h{font-size:11px;letter-spacing:.12em;color:var(--muted);font-weight:700;margin:14px 0 4px 10px}
+.nav-in{margin:2px 0 2px 12px;padding:5px 8px;border:1px solid var(--accent);border-radius:8px;background:var(--surface);min-width:0}
+.lib-main{min-width:0;display:flex;flex-direction:column;gap:10px}
+.lib-tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.lib-tools input{flex:1 1 180px;min-width:0;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2)}
+.lib-empty{padding:30px 0;grid-column:1 / -1}
+.tpl-actions{display:flex;flex-wrap:wrap;gap:4px;margin-top:2px}
+.tpl-actions button,.tpl-actions select{font-size:12px;padding:3px 8px;border-radius:6px;border:1px solid var(--line);background:var(--surface);max-width:100%}
+.tpl-actions button:hover{border-color:var(--accent)}
+.tpl-actions .danger,.btn.danger{color:var(--danger)}
+.tpl-open{padding:0;border:0;background:transparent;text-align:left;display:flex;flex-direction:column;gap:6px}
+.tpl-rename{padding:4px 8px;border:1px solid var(--accent);border-radius:6px;background:var(--surface);font-weight:700;min-width:0}
+.tpl .by{font-size:12px;color:var(--muted)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:10px;font-size:14px;z-index:40;max-width:calc(100% - 32px);box-shadow:0 6px 20px rgba(0,0,0,.2)}
+@media (max-width:700px){
+  .lib{grid-template-columns:minmax(0,1fr);min-height:0}
+  .lib-nav{flex-direction:row;overflow-x:auto;border-right:0;border-bottom:1px solid var(--line);padding:0 0 8px}
+  .nav-btn{flex:none}.nav-btn.sub{padding-left:10px}.nav-h{display:none}
+}
+.tpl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.tpl{display:flex;flex-direction:column;gap:6px;text-align:left;padding:8px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2);min-width:0}
+.tpl:hover{border-color:var(--accent)}
+.tpl .chip{font-style:normal}
+.tpl svg{width:100%;height:120px;border-radius:6px;background:var(--stage)}
+.tpl strong{font-size:14px}
+.tpl span{font-size:12px;color:var(--muted)}
+.chip{display:inline-block;padding:1px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-size:11px;font-weight:700;margin-right:4px}
+
+@media (max-width:1180px){
+  .work{grid-template-columns:184px minmax(0,1fr)}
+  .panel{grid-column:1 / -1;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+}
+@media (max-width:760px){
+  .work{grid-template-columns:minmax(0,1fr)}
+  .tools{flex-direction:row;overflow-x:auto;gap:16px;padding:10px}
+  .tg{flex:none}
+  .tg-grid{display:flex;gap:2px}
+  .tool{width:56px}
+  .tool.wide{width:auto;flex-direction:column;gap:2px;padding:6px 8px}
+  .tool.wide svg{width:30px;height:30px}
+  .swatches{flex-wrap:nowrap}
+  .brand{font-size:22px}
+  #board{max-height:none}
+}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect x="1.5" y="4.5" width="25" height="19" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><line x1="14" y1="4.5" x2="14" y2="23.5" stroke="currentColor" stroke-width="2"/><circle cx="14" cy="14" r="3.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="7" cy="10" r="2.2" fill="#d6453d"/><circle cx="21" cy="18" r="2.2" fill="#2f6fd0"/></svg>
+      體育教案圖板
+    </div>
+    <input id="lessonTitle" class="title-in" type="text" aria-label="單元名稱" placeholder="輸入單元名稱">
+    <select id="grade" aria-label="適用年段">
+      <option>國小低年級</option><option>國小中年級</option><option>國小高年級</option><option>國中</option><option>高中</option>
+    </select>
+    <button class="btn" id="btnTemplates" type="button">範本庫</button>
+    <button class="btn" id="btnSaveTpl" type="button">存成範本</button>
+    <button class="btn primary" id="btnExport" type="button">匯出圖片</button>
+  </header>
+
+  <div class="work">
+    <aside class="tools" id="tools" aria-label="工具"></aside>
+
+    <main class="stage">
+      <div class="stage-bar">
+        <select id="court" aria-label="場地"></select>
+        <div class="steps" id="steps" role="tablist" aria-label="步驟"></div>
+        <div class="play">
+          <button class="btn small" id="btnPlay" type="button" title="從目前步驟開始，依序播放人和球的移動">▶ 播放動畫</button>
+          <select id="speed" aria-label="播放速度"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option></select>
+        </div>
+        <div class="history">
+          <button class="icon-btn" id="btnUndo" type="button" title="復原 (Ctrl+Z)" aria-label="復原"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 5 3 9l4 4"/><path d="M3 9h9a5 5 0 0 1 0 10h-2"/></svg></button>
+          <button class="icon-btn" id="btnRedo" type="button" title="重做 (Ctrl+Shift+Z)" aria-label="重做"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m13 5 4 4-4 4"/><path d="M17 9H8a5 5 0 0 0 0 10h2"/></svg></button>
+        </div>
+      </div>
+      <div class="canvas-wrap"><svg id="board" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 600" role="img" aria-label="教案圖畫布"></svg></div>
+      <div class="hint" id="hint"></div>
+    </main>
+
+    <aside class="panel">
+      <section class="card">
+        <h2>選取的物件</h2>
+        <div id="props"></div>
+      </section>
+      <section class="card">
+        <h2>本步驟 <small id="stepCount"></small></h2>
+        <div class="field"><label for="stepName">步驟名稱</label><input id="stepName" type="text" placeholder="例：傳球後切入"></div>
+        <div class="field"><label for="stepNote">活動說明</label><textarea id="stepNote" placeholder="寫下這一步的動作要領、口令或安全提醒，會一起出現在匯出的圖片上。"></textarea></div>
+        <div class="row">
+          <button class="btn small" id="btnClearStep" type="button">清空畫面</button>
+          <button class="btn small danger" id="btnDelStep" type="button">刪除此步驟</button>
+        </div>
+      </section>
+      <section class="card">
+        <h2>教案資訊</h2>
+        <div class="field"><label for="infoPlayers">人數與分組</label><input id="infoPlayers" type="text" placeholder="例：每組 3 人，共 8 組"></div>
+        <div class="field"><label for="infoEquip">器材</label><input id="infoEquip" type="text" placeholder="例：籃球 8 顆、三角錐 16 個"></div>
+        <div class="field"><label for="infoTime">時間</label><input id="infoTime" type="text" placeholder="例：15 分鐘"></div>
+        <div class="field"><label for="iconScale">圖示大小 <span id="iconScaleVal"></span></label><input id="iconScale" type="range" min="0.6" max="1.8" step="0.1"></div>
+      </section>
+    </aside>
+  </div>
+</div>
+
+<div class="modal" id="exportModal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="expTitle">
+    <div class="modal-head">
+      <h2 id="expTitle">匯出教案圖</h2>
+      <button class="btn small" type="button" data-close>關閉</button>
+    </div>
+    <div class="row">
+      <div class="seg" role="group" aria-label="匯出範圍">
+        <button type="button" id="expCur" aria-pressed="true">目前步驟</button>
+        <button type="button" id="expAll" aria-pressed="false">全部步驟＋說明</button>
+      </div>
+      <button class="btn primary small" id="btnCopyImg" type="button">複製圖片</button>
+    </div>
+    <p class="exp-msg" id="expMsg">在圖片上按右鍵（手機長按）可以「另存圖片」，或按「複製圖片」直接貼進 Word、Google 文件或簡報。</p>
+    <img class="exp-img" id="expImg" alt="匯出的教案圖預覽">
+  </div>
+</div>
+
+<div class="modal" id="tplModal" hidden>
+  <div class="modal-card wide" role="dialog" aria-modal="true" aria-labelledby="tplTitle">
+    <div class="modal-head">
+      <h2 id="tplTitle">範本庫</h2>
+      <button class="btn small" type="button" data-close>關閉</button>
+    </div>
+    <div class="lib">
+      <nav class="lib-nav" id="libNav" aria-label="範本分類"></nav>
+      <div class="lib-main">
+        <div class="lib-tools" id="libTools"></div>
+        <p class="exp-msg" id="libMsg"></p>
+        <div class="tpl-grid" id="tplGrid"></div>
+      </div>
+    </div>
+    <input type="file" id="importFile" accept=".json,application/json" hidden>
+  </div>
+</div>
+
+<div class="modal" id="saveModal" hidden>
+  <form class="modal-card narrow" role="dialog" aria-modal="true" aria-labelledby="saveTitle">
+    <div class="modal-head">
+      <h2 id="saveTitle">存成範本</h2>
+      <button class="btn small" type="button" data-close>取消</button>
+    </div>
+    <div class="field" id="saveModeField" hidden>
+      <label>儲存方式</label>
+      <div class="seg"><button type="button" data-mode="update">更新「<span id="saveModeName"></span>」</button><button type="button" data-mode="new">另存成新範本</button></div>
+    </div>
+    <div class="field"><label for="saveName">範本名稱</label><input id="saveName" type="text" maxlength="40" placeholder="例：三人傳切上籃"></div>
+    <div class="field"><label for="saveFolder">放進資料夾</label><select id="saveFolder"></select></div>
+    <div class="field" id="newFolderField" hidden><label for="saveNewFolder">新資料夾名稱</label><input id="saveNewFolder" type="text" maxlength="40" placeholder="例：七年級 籃球單元"></div>
+    <p class="exp-msg" id="saveMsg"></p>
+    <div class="row"><button class="btn primary" id="btnDoSave" type="submit">儲存</button></div>
+  </form>
+</div>
+
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+(() => {
+const W = 1000;
+const FONT = '"Noto Sans TC","PingFang TC","Microsoft JhengHei","Heiti TC",sans-serif';
+const $ = s => document.querySelector(s);
+const uid = () => Math.random().toString(36).slice(2, 10);
+const f = n => Math.round(n * 10) / 10;
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ---------- Courts (drawn in meters, scaled to a 1000-wide canvas) ---------- */
+const COURTS = {};
+const C = (id, o) => { COURTS[id] = o; };
+const g = (lw, inner, stroke = '#fff') => `<g fill="none" stroke="${stroke}" stroke-width="${lw}" stroke-linejoin="round">${inner}</g>`;
+const mirror = (L, inner) => `<g transform="matrix(-1 0 0 1 ${L} 0)">${inner}</g>`;
+
+const bbEnd = lw => `<rect x="0" y="5.05" width="5.8" height="4.9" fill="#b8643a"/><circle cx="5.8" cy="7.5" r="1.8"/><path d="M0 0.9H2.99A6.75 6.75 0 0 1 2.99 14.1H0"/><line x1="1.2" y1="6.6" x2="1.2" y2="8.4" stroke-width="${lw * 2}"/><circle cx="1.575" cy="7.5" r="0.23" stroke="#e8562a" stroke-width="${lw * 1.4}"/>`;
+
+C('bb-half', { name: '籃球（半場）', group: '球類', L: 15, B: 14, m: 2, bg: '#b37d48', ball: '#e07a2c',
+  draw: lw => `<g transform="matrix(0 1 1 0 0 0)"><rect width="14" height="15" fill="#dcaa6f"/>${g(lw, bbEnd(lw) + '<path d="M14 5.7A1.8 1.8 0 0 0 14 9.3"/><rect width="14" height="15"/>')}</g>` });
+C('bb-full', { name: '籃球（全場）', group: '球類', L: 28, B: 15, m: 2, bg: '#b37d48', ball: '#e07a2c',
+  draw: lw => `<rect width="28" height="15" fill="#dcaa6f"/>${g(lw, bbEnd(lw) + mirror(28, bbEnd(lw)) + '<line x1="14" y1="0" x2="14" y2="15"/><circle cx="14" cy="7.5" r="1.8"/><rect width="28" height="15"/>')}` });
+C('volleyball', { name: '排球', group: '球類', L: 18, B: 9, m: 3, bg: '#2f6fae', ball: '#f3d34a',
+  draw: lw => `<rect width="18" height="9" fill="#e3843f"/>${g(lw, '<rect width="18" height="9"/><line x1="6" y1="0" x2="6" y2="9"/><line x1="12" y1="0" x2="12" y2="9"/><line x1="9" y1="0" x2="9" y2="9"/>')}<line x1="9" y1="-1" x2="9" y2="10" stroke="#1d2226" stroke-width="${lw * 2.4}"/><circle cx="9" cy="-1" r="0.22" fill="#1d2226"/><circle cx="9" cy="10" r="0.22" fill="#1d2226"/>` });
+C('badminton', { name: '羽球', group: '球類', L: 13.4, B: 6.1, m: 2, bg: '#22594a', ball: '#ffffff',
+  draw: lw => `<rect width="13.4" height="6.1" fill="#2f8a62"/>${g(lw, '<rect width="13.4" height="6.1"/><line x1="0" y1="0.46" x2="13.4" y2="0.46"/><line x1="0" y1="5.64" x2="13.4" y2="5.64"/><line x1="4.72" y1="0" x2="4.72" y2="6.1"/><line x1="8.68" y1="0" x2="8.68" y2="6.1"/><line x1="0.76" y1="0" x2="0.76" y2="6.1"/><line x1="12.64" y1="0" x2="12.64" y2="6.1"/><line x1="0" y1="3.05" x2="4.72" y2="3.05"/><line x1="8.68" y1="3.05" x2="13.4" y2="3.05"/>')}<line x1="6.7" y1="-0.3" x2="6.7" y2="6.4" stroke="#14211c" stroke-width="${lw * 2.2}"/>` });
+C('tabletennis', { name: '桌球', group: '球類', L: 14, B: 7, m: 1, bg: '#5d2328', ball: '#ff9a2e',
+  draw: lw => `<rect width="14" height="7" fill="#9a3439" stroke="#fff" stroke-width="${lw * 0.8}"/><rect x="5.63" y="2.7375" width="2.74" height="1.525" fill="#1c5aa3" stroke="#fff" stroke-width="${lw}"/><line x1="5.63" y1="3.5" x2="8.37" y2="3.5" stroke="#fff" stroke-width="${lw * 0.6}"/><line x1="7" y1="2.6" x2="7" y2="4.4" stroke="#111" stroke-width="${lw * 1.8}"/>` });
+C('tennis', { name: '網球', group: '球類', L: 23.77, B: 10.97, m: 4, bg: '#3d7f52', ball: '#d7e84a',
+  draw: lw => `<rect width="23.77" height="10.97" fill="#2c66ad"/>${g(lw, '<rect width="23.77" height="10.97"/><line x1="0" y1="1.37" x2="23.77" y2="1.37"/><line x1="0" y1="9.6" x2="23.77" y2="9.6"/><line x1="5.485" y1="1.37" x2="5.485" y2="9.6"/><line x1="18.285" y1="1.37" x2="18.285" y2="9.6"/><line x1="5.485" y1="5.485" x2="18.285" y2="5.485"/><line x1="0" y1="5.485" x2="0.3" y2="5.485"/><line x1="23.47" y1="5.485" x2="23.77" y2="5.485"/>')}<line x1="11.885" y1="-0.9" x2="11.885" y2="11.87" stroke="#152130" stroke-width="${lw * 2.2}"/>` });
+const socEnd = '<rect x="0" y="13.84" width="16.5" height="40.32"/><rect x="0" y="24.84" width="5.5" height="18.32"/><circle cx="11" cy="34" r="0.3" fill="#fff"/><path d="M16.5 26.69A9.15 9.15 0 0 1 16.5 41.31"/><rect x="-2" y="30.34" width="2" height="7.32" fill="rgba(255,255,255,0.3)"/><path d="M1 0A1 1 0 0 1 0 1M0 67A1 1 0 0 1 1 68"/>';
+C('soccer', { name: '足球', group: '球類', L: 105, B: 68, m: 4, bg: '#357d3e', ball: '#ffffff',
+  draw: lw => `<rect width="105" height="68" fill="#3c8a45"/>${Array.from({length: 7}, (_, i) => `<rect x="${i * 15}" y="0" width="7.5" height="68" fill="#44944c"/>`).join('')}${g(lw, '<rect width="105" height="68"/><line x1="52.5" y1="0" x2="52.5" y2="68"/><circle cx="52.5" cy="34" r="9.15"/><circle cx="52.5" cy="34" r="0.3" fill="#fff"/>' + socEnd + mirror(105, socEnd))}` });
+const hbEnd = '<path d="M0 2.5A6 6 0 0 1 6 8.5L6 11.5A6 6 0 0 1 0 17.5Z" fill="#d88a3a"/><path d="M2.96 0A9 9 0 0 1 9 8.5L9 11.5A9 9 0 0 1 2.96 20" stroke-dasharray="0.6 0.6"/><line x1="7" y1="9.5" x2="7" y2="10.5"/><rect x="-1" y="8.5" width="1" height="3" fill="rgba(255,255,255,0.3)"/>';
+C('handball', { name: '手球／五人制足球', group: '球類', L: 40, B: 20, m: 3, bg: '#285a92', ball: '#f4f4f4',
+  draw: lw => `<rect width="40" height="20" fill="#3a72b2"/>${g(lw, hbEnd + mirror(40, hbEnd) + '<line x1="20" y1="0" x2="20" y2="20"/><circle cx="20" cy="10" r="3"/><rect width="40" height="20"/>')}` });
+C('dodgeball', { name: '躲避球', group: '球類', L: 20, B: 10, m: 4, bg: '#3f6f5c', ball: '#e8463a',
+  draw: (lw, s) => `<rect width="20" height="10" fill="#5f9a7d"/>${g(lw, '<rect width="20" height="10"/><line x1="10" y1="0" x2="10" y2="10"/>')}<rect x="-2.6" y="-2.6" width="25.2" height="15.2" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="${lw * 0.8}" stroke-dasharray="0.5 0.4"/><g fill="rgba(255,255,255,0.55)" font-size="${17 / s}" font-weight="700" text-anchor="middle"><text x="5" y="5.3">A 隊內場</text><text x="15" y="5.3">B 隊內場</text><text x="10" y="-3.1">外場</text><text x="10" y="13.7">外場</text></g>` });
+C('softball', { name: '壘球／樂樂棒球', group: '球類', L: 70, B: 56, m: 1, bg: '#3f8547', ball: '#fff6d8',
+  draw: (lw, s) => {
+    const base = (x, y) => `<rect x="-0.45" y="-0.45" width="0.9" height="0.9" fill="#fff" transform="translate(${x} ${y}) rotate(45)"/>`;
+    return `<path d="M35 52L1.059 18.059A48 48 0 0 1 68.941 18.059Z" fill="#4c9a53"/><path d="M35 52L15.201 32.201A28 28 0 0 1 54.799 32.201Z" fill="#c48a55"/><path d="M35 49L45 39.067L35 29.13L25 39.067Z" fill="#4c9a53"/><circle cx="35" cy="38.89" r="2.4" fill="#d39a63"/>${g(lw, '<path d="M35 52L1.059 18.059M35 52L68.941 18.059"/><path d="M1.059 18.059A48 48 0 0 1 68.941 18.059"/><path d="M35 52L47.933 39.067L35 26.134L22.067 39.067Z" stroke-opacity="0.75"/>')}${base(47.933, 39.067)}${base(35, 26.134)}${base(22.067, 39.067)}<path d="M34.55 51.55h0.9v0.45l-0.45 0.45l-0.45 -0.45Z" fill="#fff"/><g fill="rgba(255,255,255,0.85)" font-size="${14 / s}" font-weight="700" text-anchor="middle"><text x="51" y="40">一壘</text><text x="35" y="24.3">二壘</text><text x="19" y="40">三壘</text><text x="35" y="55.4">本壘</text></g>`;
+  } });
+const TR = { cy: 23.22, x1: 23.22, x2: 73.22, r0: 15.9, lane: 1.22 };
+const stad = r => `M${TR.x1} ${f(TR.cy - r * 1)}H${TR.x2}A${r} ${r} 0 0 1 ${TR.x2} ${TR.cy + r}H${TR.x1}A${r} ${r} 0 0 1 ${TR.x1} ${TR.cy - r}Z`;
+C('track', { name: '田徑操場（200 公尺）', group: '田徑', L: 96.44, B: 46.44, m: 3, bg: '#6f8f6a', ball: '#ffffff',
+  draw: (lw, s) => `<path d="${stad(23.22)}" fill="#b8533c"/><path d="${stad(15.9)}" fill="#4f9a52"/>${g(lw * 0.8, Array.from({length: 7}, (_, i) => `<path d="${stad(f(15.9 + 1.22 * i))}"/>`).join(''))}<line x1="73.22" y1="0" x2="73.22" y2="7.32" stroke="#fff" stroke-width="${lw * 2.4}"/><text x="73.22" y="-0.9" fill="#fff" font-size="${14 / s}" font-weight="700" text-anchor="middle">起終點</text>` });
+C('gym', { name: '體育館空地（20×12 公尺）', group: '空白場地', L: 20, B: 12, m: 1, bg: '#bfc3ba', ball: '#e07a2c',
+  draw: (lw, s) => {
+    let grid = '';
+    for (let x = 1; x < 20; x++) grid += `<line x1="${x}" y1="0" x2="${x}" y2="12" stroke="${x % 5 ? 'rgba(30,40,40,0.10)' : 'rgba(30,40,40,0.28)'}"/>`;
+    for (let y = 1; y < 12; y++) grid += `<line x1="0" y1="${y}" x2="20" y2="${y}" stroke="${y % 5 ? 'rgba(30,40,40,0.10)' : 'rgba(30,40,40,0.28)'}"/>`;
+    return `<rect width="20" height="12" fill="#dde0d8"/>${g(lw * 0.6, grid, 'none')}<rect width="20" height="12" fill="none" stroke="#6f766f" stroke-width="${lw}"/><text x="20" y="12.75" fill="#4a514b" font-size="${13 / s}" text-anchor="end">1 格 ＝ 1 公尺</text>`;
+  } });
+C('grass', { name: '戶外草地（40×25 公尺）', group: '空白場地', L: 40, B: 25, m: 1, bg: '#3f7f43', ball: '#ffffff',
+  draw: (lw, s) => {
+    let st = '', grid = '';
+    for (let x = 0; x < 40; x += 10) st += `<rect x="${x}" y="0" width="5" height="25" fill="#559e58"/>`;
+    for (let x = 5; x < 40; x += 5) grid += `<line x1="${x}" y1="0" x2="${x}" y2="25"/>`;
+    for (let y = 5; y < 25; y += 5) grid += `<line x1="0" y1="${y}" x2="40" y2="${y}"/>`;
+    return `<rect width="40" height="25" fill="#4f9752"/>${st}${g(lw * 0.6, grid, 'rgba(255,255,255,0.22)')}<rect width="40" height="25" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="${lw}"/><text x="40" y="25.75" fill="rgba(255,255,255,0.85)" font-size="${13 / s}" text-anchor="end">1 格 ＝ 5 公尺</text>`;
+  } });
+
+C('pool', { name: '游泳池（25 公尺・6 水道）', group: '水上', L: 25, B: 15, m: 2.5, bg: '#cdd6da', ball: '#f2c230',
+  draw: (lw, s) => {
+    let h = `<rect x="-0.35" y="-0.35" width="25.7" height="15.7" rx="0.25" fill="#eef2f3"/><rect width="25" height="15" fill="#3d9fd8"/>`;
+    for (let k = 0; k < 6; k++) {
+      const c = 1.25 + 2.5 * k;
+      h += `<path d="M2 ${c}H23M2 ${c - 0.5}V${c + 0.5}M23 ${c - 0.5}V${c + 0.5}" fill="none" stroke="#1d4f8c" stroke-width="${lw * 2.6}" opacity="0.6"/>`;
+      h += `<text x="26.3" y="${c}" fill="#34464d" font-size="${15 / s}" font-weight="700" text-anchor="middle" dominant-baseline="central">${k + 1}</text>`;
+    }
+    for (let k = 1; k < 6; k++) {
+      const y = 2.5 * k;
+      h += `<line x1="0" y1="${y}" x2="25" y2="${y}" stroke="#ffffff" stroke-width="${lw * 2.4}" stroke-dasharray="0.45 0.45"/><line x1="0" y1="${y}" x2="25" y2="${y}" stroke="#d6332b" stroke-width="${lw * 2.4}" stroke-dasharray="0.45 0.45" stroke-dashoffset="0.45"/>`;
+    }
+    h += `<g stroke="rgba(255,255,255,0.6)" stroke-width="${lw * 0.8}" stroke-dasharray="0.3 0.3"><line x1="5" y1="-0.3" x2="5" y2="15.3"/><line x1="20" y1="-0.3" x2="20" y2="15.3"/></g>`;
+    h += `<g fill="#4a5a60" font-size="${12 / s}" text-anchor="middle"><text x="5" y="-0.8">5 m</text><text x="20" y="-0.8">5 m</text><text x="-1.25" y="-0.8">出發端</text><text x="26.3" y="-0.8">水道</text></g>`;
+    return h + `<rect width="25" height="15" fill="none" stroke="#ffffff" stroke-width="${lw * 1.5}"/>`;
+  } });
+
+const scaleOf = id => { const c = COURTS[id]; return W / (c.L + 2 * c.m); };
+const courtH = id => { const c = COURTS[id]; return (c.B + 2 * c.m) * scaleOf(id); };
+const courtCache = {};
+function courtSVG(id) {
+  if (courtCache[id]) return courtCache[id];
+  const c = COURTS[id], s = scaleOf(id);
+  return courtCache[id] = `<rect width="${W}" height="${f(courtH(id))}" fill="${c.bg}"/><g transform="translate(${f(c.m * s)} ${f(c.m * s)}) scale(${s})">${c.draw(2.2 / s, s)}</g>`;
+}
+
+/* ---------- Objects ---------- */
+const TEAMS = {
+  red:    { name: '紅隊', fill: '#d6453d', stroke: '#8f2420', text: '#fff' },
+  blue:   { name: '藍隊', fill: '#2f6fd0', stroke: '#1a4489', text: '#fff' },
+  yellow: { name: '黃隊', fill: '#f2c230', stroke: '#9b7a10', text: '#1b1b1b' },
+  green:  { name: '綠隊', fill: '#2e9a5a', stroke: '#1a6038', text: '#fff' },
+  white:  { name: '白隊', fill: '#f6f6f2', stroke: '#6b6b66', text: '#1b1b1b' },
+};
+const INKS = [
+  { c: '#141414', name: '黑' }, { c: '#ffffff', name: '白' }, { c: '#d6332b', name: '紅' },
+  { c: '#1f5fbf', name: '藍' }, { c: '#f2c230', name: '黃' },
+];
+const ITEMS = {
+  player:  { name: '學生', r: 18 },
+  teacher: { name: '老師', r: 19 },
+  cone:    { name: '三角錐', r: 16 },
+  disc:    { name: '標誌盤', r: 13 },
+  ball:    { name: '球', r: 12 },
+  hoop:    { name: '呼拉圈', r: 21 },
+  hurdle:  { name: '跨欄', r: 21, rot: true },
+  ladder:  { name: '繩梯', r: 42, rot: true },
+  goal:    { name: '小球門', r: 26, rot: true },
+  mat:     { name: '軟墊', r: 36, rot: true },
+  kick:    { name: '浮板', r: 14, rot: true },
+  text:    { name: '文字', r: 16 },
+};
+const LINES = {
+  run:     { name: '跑動' },
+  pass:    { name: '傳球' },
+  dribble: { name: '運球' },
+  zone:    { name: '區域' },
+};
+const isLine = o => o && LINES[o.type];
+
+function shape(it) {
+  const mid = 'text-anchor="middle" dominant-baseline="central" font-weight="700"';
+  switch (it.type) {
+    case 'player': {
+      const t = TEAMS[it.team] || TEAMS.red, lab = String(it.label ?? '');
+      return `<circle r="14" fill="${t.fill}" stroke="${t.stroke}" stroke-width="2.5"/><text y="0.5" font-size="${lab.length > 2 ? 9 : lab.length > 1 ? 12 : 14}" fill="${t.text}" ${mid}>${esc(lab)}</text>`;
+    }
+    case 'teacher': return `<circle r="15" fill="#1f2328" stroke="#f2c230" stroke-width="3"/><text y="0.5" font-size="14" fill="#f2c230" ${mid}>師</text>`;
+    case 'cone': return `<path d="M0 -13L10 10H-10Z" fill="#f07a1a" stroke="#a84a08" stroke-width="1.5" stroke-linejoin="round"/><path d="M-5.2 -1H5.2" stroke="#fff" stroke-width="2.5"/>`;
+    case 'disc': return `<ellipse rx="10" ry="6" fill="#f2c230" stroke="#9b7a10" stroke-width="1.5"/><ellipse rx="3.5" ry="2" fill="#9b7a10" opacity="0.5"/>`;
+    case 'ball': return `<circle r="8" fill="${it.color || '#e07a2c'}" stroke="#2a2a2a" stroke-width="1.5"/><path d="M-8 0H8M0 -8V8" stroke="#2a2a2a" stroke-width="1" opacity="0.5"/>`;
+    case 'hoop': return `<circle r="17" fill="none" stroke="#5a1a40" stroke-width="6" opacity="0.35"/><circle r="17" fill="none" stroke="#e04aa8" stroke-width="4"/>`;
+    case 'hurdle': return `<rect x="-18" y="-3.5" width="36" height="7" fill="#fff" stroke="#b8322a" stroke-width="1.5"/><path d="M-9 -3.5v7M0 -3.5v7M9 -3.5v7" stroke="#b8322a" stroke-width="3"/>`;
+    case 'ladder': {
+      const rails = 'M-9 -40V40M9 -40V40', rungs = 'M-9 -30H9M-9 -15H9M-9 0H9M-9 15H9M-9 30H9';
+      return `<path d="${rails} ${rungs}" stroke="#4a3a00" stroke-width="5" stroke-linecap="round"/><path d="${rails} ${rungs}" stroke="#f2c230" stroke-width="2.6" stroke-linecap="round"/>`;
+    }
+    case 'goal': return `<rect x="-6" y="-24" width="12" height="48" fill="rgba(255,255,255,0.35)" stroke="#222" stroke-width="5"/><rect x="-6" y="-24" width="12" height="48" fill="none" stroke="#fff" stroke-width="2.6"/><path d="M-6 -12H6M-6 0H6M-6 12H6M0 -24V24" stroke="#fff" stroke-width="1" opacity="0.7"/>`;
+    case 'mat': return `<rect x="-24" y="-32" width="48" height="64" rx="3" fill="#3f78d6" stroke="#1d4a91" stroke-width="2"/><text font-size="13" fill="#fff" ${mid}>${esc(it.label || '軟墊')}</text>`;
+    case 'kick': return `<rect x="-7.5" y="-11" width="15" height="22" rx="6" fill="#f6f6f2" stroke="#1f5fbf" stroke-width="2.2"/><rect x="-4" y="-7.5" width="8" height="5" rx="2" fill="#1f5fbf" opacity="0.55"/>`;
+    case 'text': {
+      const halo = (it.color || '#141414').toLowerCase() === '#ffffff' ? '#141414' : '#ffffff';
+      return `<text font-size="${it.size || 18}" fill="${it.color || '#141414'}" stroke="${halo}" stroke-width="4" paint-order="stroke" stroke-linejoin="round" ${mid}>${esc(it.label || '文字')}</text>`;
+    }
+  }
+  return '';
+}
+const textUnits = s => [...String(s || '')].reduce((n, ch) => n + (/[\u0000-\u00ff]/.test(ch) ? 0.58 : 1), 0);
+const textHalfW = it => Math.max(8, textUnits(it.label || '文字') * (it.size || 18) / 2);
+const TEXT_MIN = 8, TEXT_MAX = 120;
+const clampSize = v => Math.max(TEXT_MIN, Math.min(TEXT_MAX, Math.round(v)));
+function selR(it) {
+  if (it.type === 'text') return Math.max(16, textHalfW(it) + 6);
+  return ITEMS[it.type].r;
+}
+function itemSVG(it, k, hit) {
+  const r = it.rot ? ` rotate(${it.rot})` : '';
+  const pad = hit ? `<circle r="${f(selR(it) * 0.9)}" fill="transparent"/>` : '';
+  return `<g ${hit ? `data-id="${it.id}" ` : ''}transform="translate(${f(it.x)} ${f(it.y)})${r} scale(${k})">${pad}${shape(it)}</g>`;
+}
+
+const qpt = (t, l) => { const u = 1 - t; return [u * u * l.x1 + 2 * u * t * l.cx + t * t * l.x2, u * u * l.y1 + 2 * u * t * l.cy + t * t * l.y2]; };
+const qder = (t, l) => [2 * (1 - t) * (l.cx - l.x1) + 2 * t * (l.x2 - l.cx), 2 * (1 - t) * (l.cy - l.y1) + 2 * t * (l.y2 - l.cy)];
+
+function lineSVG(l, hit) {
+  const c = l.color || '#141414';
+  const id = hit ? `data-id="${l.id}" ` : '';
+  if (l.type === 'zone') {
+    const x = Math.min(l.x1, l.x2), y = Math.min(l.y1, l.y2), w = Math.abs(l.x2 - l.x1), h = Math.abs(l.y2 - l.y1);
+    const halo = c.toLowerCase() === '#ffffff' ? '#141414' : '#ffffff';
+    const lab = l.label ? `<text x="${f(x + 8)}" y="${f(y + 18)}" font-size="15" font-weight="700" fill="${c}" stroke="${halo}" stroke-width="3.5" paint-order="stroke">${esc(l.label)}</text>` : '';
+    // Zones are grabbed by their edge or label only, so a box selection can start inside them.
+    const edge = hit ? `<rect x="${f(x)}" y="${f(y)}" width="${f(w)}" height="${f(h)}" rx="6" fill="none" stroke="transparent" stroke-width="16"/>` : '';
+    return `<g ${id}><rect x="${f(x)}" y="${f(y)}" width="${f(w)}" height="${f(h)}" rx="6" fill="${c}" fill-opacity="0.16" stroke="${c}" stroke-width="2.5" stroke-dasharray="10 6"${hit ? ' pointer-events="none"' : ''}/>${edge}${lab}</g>`;
+  }
+  let [dx, dy] = qder(1, l), d = Math.hypot(dx, dy);
+  if (d < 1) { dx = l.x2 - l.x1; dy = l.y2 - l.y1; d = Math.hypot(dx, dy) || 1; }
+  const ux = dx / d, uy = dy / d, AL = 15, AW = 7.5;
+  const bx = l.x2 - ux * AL, by = l.y2 - uy * AL;
+  const head = `<path d="M${f(l.x2)} ${f(l.y2)}L${f(bx - uy * AW)} ${f(by + ux * AW)}L${f(bx + uy * AW)} ${f(by - ux * AW)}Z" fill="${c}"/>`;
+  const curve = `M${f(l.x1)} ${f(l.y1)}Q${f(l.cx)} ${f(l.cy)} ${f(bx)} ${f(by)}`;
+  let body;
+  if (l.type === 'dribble') {
+    const seg = { x1: l.x1, y1: l.y1, cx: l.cx, cy: l.cy, x2: bx, y2: by };
+    const N = 90, pts = [];
+    let prev = qpt(0, seg), len = 0;
+    const samples = [];
+    for (let i = 0; i <= N; i++) { const p = qpt(i / N, seg); len += Math.hypot(p[0] - prev[0], p[1] - prev[1]); prev = p; samples.push([p, len]); }
+    samples.forEach(([p, s], i) => {
+      let [tx, ty] = qder(i / N, seg); const tl = Math.hypot(tx, ty) || 1; tx /= tl; ty /= tl;
+      const taper = Math.min(1, s / 10, (len - s) / 10);
+      const a = 5.5 * Math.sin(s / 15 * Math.PI * 2) * taper;
+      pts.push(`${f(p[0] - ty * a)} ${f(p[1] + tx * a)}`);
+    });
+    body = `<path d="M${pts.join('L')}" fill="none" stroke="${c}" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>`;
+  } else {
+    body = `<path d="${curve}" fill="none" stroke="${c}" stroke-width="3" stroke-linecap="round"${l.type === 'pass' ? ' stroke-dasharray="9 7"' : ''}/>`;
+  }
+  const hitPath = hit ? `<path d="M${f(l.x1)} ${f(l.y1)}Q${f(l.cx)} ${f(l.cy)} ${f(l.x2)} ${f(l.y2)}" fill="none" stroke="transparent" stroke-width="18"/>` : '';
+  return `<g ${id}>${hitPath}${body}${head}</g>`;
+}
+
+function boardContent(courtId, st, k, hit) {
+  const zones = [], lines = [], items = [], texts = [];
+  for (const o of st.items) {
+    if (o.type === 'zone') zones.push(lineSVG(o, hit));
+    else if (LINES[o.type]) lines.push(lineSVG(o, hit));
+    else if (o.type === 'text') texts.push(itemSVG(o, k, hit));
+    else items.push(itemSVG(o, k, hit));
+  }
+  return `<g font-family='${FONT}'>${courtSVG(courtId)}${zones.join('')}${lines.join('')}${items.join('')}${texts.join('')}</g>`;
+}
+
+/* ---------- Templates ---------- */
+function tplBuilder(courtId) {
+  const c = COURTS[courtId], s = scaleOf(courtId);
+  const P = (x, y) => ({ x: (x + c.m) * s, y: (y + c.m) * s });
+  const pl = (team, label, x, y) => ({ id: uid(), type: 'player', team, label: String(label), ...P(x, y) });
+  const it = (type, x, y, extra = {}) => ({ id: uid(), type, ...P(x, y), ...extra });
+  const ball = (x, y) => it('ball', x, y, { color: c.ball });
+  const ln = (type, a, b, ctrl, extra = {}) => {
+    const p1 = P(...a), p2 = P(...b), pc = ctrl ? P(...ctrl) : { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+    return { id: uid(), type, x1: p1.x, y1: p1.y, x2: p2.x, y2: p2.y, cx: pc.x, cy: pc.y, auto: !ctrl, color: '#141414', ...extra };
+  };
+  return { P, pl, it, ball, ln };
+}
+const TEMPLATES = [
+  { title: '三人傳切上籃', grade: '國中', court: 'bb-half', build: () => {
+    const { pl, it, ball, ln } = tplBuilder('bb-half');
+    const wait = [pl('white', 4, 7.5, 12.4), pl('white', 5, 7.5, 13.4), it('cone', 2.2, 10.2), it('cone', 12.8, 10.2), it('teacher', 16, 4)];
+    return {
+      players: '每組 3 人，其餘排隊輪替（4–5 組）', equipment: '籃球每組 1 顆、三角錐 2 個', duration: '15 分鐘',
+      steps: [
+        { name: '傳球後切入', note: 'A1 在罰球線頂端持球，傳給左翼 A2 後，立刻從防守者前方往籃框切入。傳球時看著接球者的胸口，切入要先做一個假動作。', items: [
+          pl('red', 1, 7.5, 8.5), ball(8.2, 8.0), pl('red', 2, 2.2, 6.0), pl('red', 3, 12.8, 6.0), ...wait,
+          ln('pass', [7.2, 8.3], [2.7, 6.3]), ln('run', [7.8, 8.2], [6.3, 3.1], [9.4, 5.4]) ] },
+        { name: '回傳上籃、補位', note: 'A2 把球回傳給切入的 A1，A1 接球後直接上籃。A3 往頂端補位，接著下一組依序輪替。上籃後要記得去搶籃板。', items: [
+          pl('red', 1, 6.3, 3.1), pl('red', 2, 2.2, 6.0), ball(2.6, 6.6), pl('red', 3, 12.8, 6.0), ...wait.map(o => ({ ...o })),
+          ln('pass', [2.7, 5.7], [5.9, 3.4]), ln('run', [6.6, 2.7], [7.3, 1.9]), ln('run', [12.6, 6.5], [7.9, 8.4], [12.0, 9.2]) ] },
+      ] };
+  } },
+  { title: '躲避球分組站位與夾擊', grade: '國小高年級', court: 'dodgeball', build: () => {
+    const { pl, it, ball, ln } = tplBuilder('dodgeball');
+    const red = [[3, 2], [6.5, 2.5], [8, 5], [5, 5], [2.5, 7.8], [6.5, 8]], blue = red.map(([x, y]) => [20 - x, y]);
+    const base = () => [
+      ...red.map(([x, y], i) => pl('red', i + 1, x, y)), ...blue.map(([x, y], i) => pl('blue', i + 1, x, y)),
+      pl('red', 7, 21.6, 5), pl('red', 8, 16, -1.4), pl('red', 9, 16, 11.4),
+      pl('blue', 7, -1.6, 5), pl('blue', 8, 4, -1.4), pl('blue', 9, 4, 11.4), it('teacher', 10, -2.4) ];
+    return {
+      players: '全班分兩隊，每隊內場 6 人、外場 3 人', equipment: '躲避球 1 顆、兩色號碼衣', duration: '20 分鐘',
+      steps: [
+        { name: '分組站位', note: '紅隊內場在 A 區，外場站在 B 區外圍；藍隊相反。開球前內場隊員散開，不要擠在中線附近。', items: [...base(), ball(21.6, 5.9)] },
+        { name: '外場傳球夾擊', note: '紅隊外場 7 號把球傳給 8 號，8 號從側邊出手攻擊藍隊 2 號。被瞄準的人往空的地方側移閃躲。只能打肩膀以下。', items: [...base(), ball(16.6, -0.9),
+          ln('pass', [21.4, 4.4], [16.5, -0.8], [20.5, 0.6]), ln('pass', [15.8, -0.8], [14.2, 2.0]), ln('run', [13.4, 2.8], [12.6, 4.6], [12.6, 3.4])] },
+      ] };
+  } },
+  { title: '排球接發球 W 站位', grade: '高中', court: 'volleyball', build: () => {
+    const { pl, ball, ln } = tplBuilder('volleyball');
+    const blueW = [[12.8, 1.4, 4], [12.8, 4.5, 3], [12.8, 7.6, 2], [16, 3, 5], [16, 6, 1], [9.7, 6.4, 6]];
+    const red = [[7.6, 1.6, 4], [7.6, 4.5, 3], [7.6, 7.4, 2], [3.4, 2.2, 5], [3.4, 6.2, 6], [-1.2, 7.4, 1]];
+    const base = () => [...blueW.map(([x, y, n]) => pl('blue', n, x, y)), ...red.map(([x, y, n]) => pl('red', n, x, y))];
+    return {
+      players: '每隊 6 人，其餘同學在場邊撿球', equipment: '排球每場 3 顆', duration: '20 分鐘',
+      steps: [
+        { name: '發球與 W 站位', note: '藍隊以 W 形接發：前排三人站在進攻線後一步，後排兩人補中間空檔，舉球員（6 號）靠網等球。紅隊 1 號在端線後發球。', items: [...base(), ball(-1.2, 8.2), ln('pass', [-0.9, 7.2], [15.6, 3.2], [7, 1.0])] },
+        { name: '接球→舉球→攻擊', note: '藍隊 5 號低手接球送到 6 號頭上；6 號高手舉球到左側；4 號助跑起跳攻擊。接球目標是網前 2 公尺、偏右的位置。', items: [...base(), ball(15.6, 3.6),
+          ln('pass', [15.6, 2.8], [10.0, 5.9], [13.8, 1.4]), ln('pass', [9.6, 5.9], [10.2, 1.3], [8.8, 3.2]), ln('run', [13.1, 1.6], [10.7, 1.6])] },
+      ] };
+  } },
+  { title: '大隊接力交接區練習', grade: '國小中年級', court: 'track', build: () => {
+    const { pl, it, ln } = tplBuilder('track');
+    const y1 = 23.22 - (15.9 + 0.61), y3 = 23.22 - (15.9 + 2.44 + 0.61);
+    return {
+      players: '全班分紅藍兩隊，每隊 12 人', equipment: '接力棒 2 支、三角錐 4 個', duration: '15 分鐘',
+      steps: [
+        { name: '交接區內完成交棒', note: '接棒者在交接區起點前等待，看到隊友跑到三角錐時起跑；在 20 公尺交接區內喊「手！」並完成交棒。交棒後沿跑道外側離開，不要橫越跑道。', items: [
+          ln('zone', [40, 3.66], [60, 7.32], null, { label: '交接區 20 m', color: '#ffffff' }),
+          it('cone', 34, 8.6), it('cone', 40, 8.6), it('cone', 60, 8.6),
+          pl('red', 1, 31, y1), pl('red', 2, 41.5, y1), pl('blue', 1, 28, y3), pl('blue', 2, 41.5, y3),
+          ln('run', [32.6, y1], [44, y1], null, { color: '#ffffff' }), ln('run', [43.1, y1], [58, y1], null, { color: '#ffffff' }),
+          ln('run', [29.6, y3], [40.5, y3], null, { color: '#ffffff' }),
+          ...[3, 4, 5, 6].map((n, i) => pl('red', n, 44 + i * 2.2, 13)), ...[3, 4, 5, 6].map((n, i) => pl('blue', n, 44 + i * 2.2, 16.5)),
+          it('teacher', 62, 13), it('text', 37, 11.4, { label: '起跑提示錐', size: 14, color: '#141414' }) ] },
+      ] };
+  } },
+  { title: '二過一撞牆配合', grade: '國中', court: 'soccer', build: () => {
+    const { pl, it, ball, ln } = tplBuilder('soccer');
+    const base = () => [pl('blue', 'B', 81, 35.5), pl('yellow', 'GK', 103.6, 34), it('cone', 70, 18), it('cone', 70, 50), it('teacher', 66, 30)];
+    return {
+      players: '三人一組（2 攻 1 守）＋守門員', equipment: '足球每組 1 顆、三角錐 2 個', duration: '20 分鐘',
+      steps: [
+        { name: '傳球給隊友後前插', note: 'A1 帶球逼近防守者，把球傳給 A2（牆），自己立刻從防守者身後前插。傳球用腳內側，力量要平穩。', items: [...base(),
+          pl('red', 1, 73, 40), ball(74.6, 41.2), pl('red', 2, 83, 22),
+          ln('pass', [74, 39], [82.2, 23.5]), ln('run', [74, 41.5], [90, 40], [83, 48])] },
+        { name: '回傳後射門', note: 'A2 一腳把球回傳到 A1 前方的空檔，A1 接球後直接射門。回傳要傳到隊友前面，不是腳下。', items: [...base(),
+          pl('red', 1, 90, 40), pl('red', 2, 83, 22), ball(83.8, 23.6),
+          ln('pass', [84, 23.2], [89.4, 38.4], [88.5, 28]), ln('pass', [91, 39.4], [104.5, 32.5])] },
+      ] };
+  } },
+  { title: '羽球米字步法', grade: '國小高年級', court: 'badminton', build: () => {
+    const { pl, it, ln } = tplBuilder('badminton');
+    const pts = [[7.5, 0.8], [7.5, 5.3], [10.3, 0.6], [10.3, 5.5], [12.8, 0.8], [12.8, 5.3]];
+    return {
+      players: '兩人一組，一人練習一人計時', equipment: '標誌盤 6 個、碼錶', duration: '10 分鐘',
+      steps: [
+        { name: '中心出發、碰點回位', note: '從場地中心站好預備姿勢，依老師指的方向跨步到標誌盤、碰一下再回到中心。每回合 30 秒，強調回中心時重心放低。', items: [
+          ...pts.map(([x, y]) => it('disc', x, y)), pl('red', 1, 10.3, 3.05),
+          ...pts.map(([x, y]) => ln('run', [10.3 + (x - 10.3) * 0.18, 3.05 + (y - 3.05) * 0.18], [10.3 + (x - 10.3) * 0.82, 3.05 + (y - 3.05) * 0.82])),
+          it('teacher', 4.5, 3.05), pl('white', 2, 13.4 + 1.1, 3.05) ] },
+      ] };
+  } },
+  { title: '敏捷循環站', grade: '國小低年級', court: 'gym', build: () => {
+    const { pl, it, ln } = tplBuilder('gym');
+    return {
+      players: '全班分 4 組，每站 6–7 人', equipment: '繩梯 1 組、跨欄 3 個、呼拉圈 4 個、軟墊 2 張', duration: '每站 3 分鐘，共 12 分鐘',
+      steps: [
+        { name: '四站輪替', note: '聽哨音換站，依箭頭方向順時針移動。站 1 繩梯小碎步、站 2 雙腳跳過跨欄、站 3 單腳跳呼拉圈、站 4 軟墊上滾翻。跳躍站要等前一位落地才出發。', items: [
+          ln('zone', [1, 1], [9, 5.4], null, { label: '站 1 繩梯', color: '#1f5fbf' }), ln('zone', [11, 1], [19, 5.4], null, { label: '站 2 跨欄', color: '#d6332b' }),
+          ln('zone', [11, 6.6], [19, 11], null, { label: '站 3 呼拉圈', color: '#1f5fbf' }), ln('zone', [1, 6.6], [9, 11], null, { label: '站 4 軟墊', color: '#d6332b' }),
+          it('ladder', 5.5, 3.3, { rot: 90 }), it('hurdle', 13.6, 3.3, { rot: 90 }), it('hurdle', 15.4, 3.3, { rot: 90 }), it('hurdle', 17.2, 3.3, { rot: 90 }),
+          it('hoop', 12.9, 9.0), it('hoop', 14.7, 9.0), it('hoop', 16.5, 9.0), it('hoop', 18.2, 9.0),
+          it('mat', 4.2, 8.9, { rot: 90 }), it('mat', 6.8, 8.9, { rot: 90, label: '軟墊' }),
+          pl('red', 1, 2.2, 3.3), pl('blue', 1, 12, 3.3), pl('yellow', 1, 12, 7.9), pl('green', 1, 2.2, 8.9),
+          ln('run', [8.9, 4.8], [11.1, 4.8], [10, 3.9]), ln('run', [11.3, 5.1], [11.3, 6.9], [12.0, 6.0]),
+          ln('run', [11.1, 7.2], [8.9, 7.2], [10, 8.1]), ln('run', [8.7, 6.9], [8.7, 5.1], [8.0, 6.0]),
+          it('teacher', 10, 6) ] },
+      ] };
+  } },
+  { title: '游泳分道打水練習', grade: '國小中年級', court: 'pool', build: () => {
+    const { pl, it, ln } = tplBuilder('pool');
+    const teams = ['red', 'blue', 'yellow', 'green'], s1 = [], s2 = [];
+    teams.forEach((t, k) => {
+      const c = 1.25 + 2.5 * k, out = c - 0.55, ret = c + 0.55;
+      const kickA = it('kick', 2.4, out, { rot: 90 }), kickB = it('kick', 2.4, out, { rot: 90 });
+      s1.push(pl(t, 1, 1.4, out), kickA, pl(t, 2, -0.9, c - 0.6), pl(t, 3, -0.9, c + 0.6), ln('run', [2.0, out], [22, out]));
+      s2.push(pl(t, 1, 22.4, ret), { ...kickA, x: it('kick', 21.4, ret).x, y: it('kick', 21.4, ret).y }, pl(t, 2, 1.4, out), kickB, pl(t, 3, -0.9, c - 0.6),
+        ln('run', [21.8, ret], [3, ret]), ln('run', [2.0, out], [12, out]));
+    });
+    const zone = ln('zone', [0.2, 10.2], [24.8, 14.8], null, { label: '第 5–6 水道 教學示範區', color: '#ffffff' });
+    const teacher = it('teacher', 12.5, 16.3);
+    return {
+      players: '每水道 3 人，共 4 組', equipment: '浮板每人 1 塊', duration: '15 分鐘',
+      steps: [
+        { name: '第一位出發', note: '每個水道一組。第 1 位扶浮板打水到對岸，第 2、3 位在池邊坐好等待。出發前先確認前方沒有人。', items: [zone, ...s1, teacher] },
+        { name: '靠右回程、下一位出發', note: '第 1 位到對岸後，從水道的另一側打水游回來。前一位游過中間 12.5 公尺，下一位才出發。老師站在池邊中段，看得到全部水道。', items: [{ ...zone }, ...s2, { ...teacher }] },
+      ] };
+  } },
+];
+function docFromTemplate(t) {
+  const b = t.build();
+  return { title: t.title, grade: t.grade, court: t.court, players: b.players, equipment: b.equipment, duration: b.duration,
+    iconScale: 1, cur: 0, steps: b.steps.map(s => ({ id: uid(), name: s.name, note: s.note, items: s.items })) };
+}
+
+/* ---------- State ---------- */
+const KEY = 'pe-board-v1';
+let doc;
+try { const raw = localStorage.getItem(KEY); if (raw) { const d = JSON.parse(raw); if (d && Array.isArray(d.steps) && d.steps.length && COURTS[d.court]) doc = d; } } catch (e) {}
+if (!doc) doc = docFromTemplate(TEMPLATES[0]);
+const ui = { tool: 'select', team: 'red', ink: '#141414', sel: null, sels: [] };
+let undoStack = [], redoStack = [];
+const step = () => doc.steps[doc.cur];
+const findObj = id => step().items.find(o => o.id === id);
+// ui.sel holds a single selection (shows handles and full properties); ui.sels holds a multi-selection.
+const getSel = () => ui.sel ? findObj(ui.sel) : null;
+const selIds = () => ui.sels.length ? ui.sels : ui.sel ? [ui.sel] : [];
+const selObjs = () => selIds().map(findObj).filter(Boolean);
+function setSelection(ids) { ids = [...new Set(ids)]; if (ids.length === 1) { ui.sel = ids[0]; ui.sels = []; } else { ui.sel = null; ui.sels = ids; } }
+const selectOne = id => setSelection([id]);
+function clearSel() { ui.sel = null; ui.sels = []; }
+function shiftObj(o, dx, dy) {
+  if (isLine(o)) { o.x1 += dx; o.y1 += dy; o.x2 += dx; o.y2 += dy; o.cx += dx; o.cy += dy; }
+  else { o.x += dx; o.y += dy; }
+}
+
+function save() { try { localStorage.setItem(KEY, JSON.stringify(doc)); } catch (e) {} }
+function pushUndo() { undoStack.push(JSON.stringify(doc)); if (undoStack.length > 80) undoStack.shift(); redoStack = []; updateHistory(); }
+function restore(json) { doc = JSON.parse(json); doc.cur = Math.min(doc.cur, doc.steps.length - 1); ui.sels = ui.sels.filter(findObj); if (ui.sel && !findObj(ui.sel)) clearSel(); syncInputs(); renderAll(); save(); }
+function doUndo() { if (!undoStack.length) return; redoStack.push(JSON.stringify(doc)); restore(undoStack.pop()); }
+function doRedo() { if (!redoStack.length) return; undoStack.push(JSON.stringify(doc)); restore(redoStack.pop()); }
+function updateHistory() { $('#btnUndo').disabled = !undoStack.length; $('#btnRedo').disabled = !redoStack.length; }
+function mutate(fn) { stopAnim(); pushUndo(); fn(); renderAll(); save(); }
+
+/* ---------- Rendering ---------- */
+const board = $('#board');
+function handleR() { const w = board.getBoundingClientRect().width || W; return Math.max(8, 8 * W / w * 0.75); }
+function ring(o, k) {
+  if (o.type === 'zone') {
+    const x = Math.min(o.x1, o.x2) - 4, y = Math.min(o.y1, o.y2) - 4, w = Math.abs(o.x2 - o.x1) + 8, h = Math.abs(o.y2 - o.y1) + 8;
+    return `<rect x="${f(x)}" y="${f(y)}" width="${f(w)}" height="${f(h)}" rx="8" fill="none" stroke="#f2c230" stroke-width="3" stroke-dasharray="6 4"/>`;
+  }
+  if (isLine(o)) return `<path d="M${f(o.x1)} ${f(o.y1)}Q${f(o.cx)} ${f(o.cy)} ${f(o.x2)} ${f(o.y2)}" fill="none" stroke="#f2c230" stroke-width="9" stroke-linecap="round" opacity="0.55"/>`;
+  if (o.type === 'text') {
+    const hw = (textHalfW(o) + 6) * k, hh = ((o.size || 18) / 2 + 5) * k;
+    return `<rect x="${f(o.x - hw)}" y="${f(o.y - hh)}" width="${f(hw * 2)}" height="${f(hh * 2)}" rx="4" fill="none" stroke="#141414" stroke-width="5" opacity="0.3"/><rect x="${f(o.x - hw)}" y="${f(o.y - hh)}" width="${f(hw * 2)}" height="${f(hh * 2)}" rx="4" fill="none" stroke="#f2c230" stroke-width="2.5" stroke-dasharray="6 4"/>`;
+  }
+  const r = selR(o) * k + 5;
+  return `<circle cx="${f(o.x)}" cy="${f(o.y)}" r="${f(r)}" fill="none" stroke="#141414" stroke-width="5" opacity="0.35"/><circle cx="${f(o.x)}" cy="${f(o.y)}" r="${f(r)}" fill="none" stroke="#f2c230" stroke-width="2.5" stroke-dasharray="6 4"/>`;
+}
+function overlay() {
+  let out = '';
+  if (drag && drag.kind === 'box') {
+    const a = drag.start, b = drag.cur;
+    out = `<rect x="${f(Math.min(a.x, b.x))}" y="${f(Math.min(a.y, b.y))}" width="${f(Math.abs(b.x - a.x))}" height="${f(Math.abs(b.y - a.y))}" fill="rgba(31,95,191,0.12)" stroke="#1f5fbf" stroke-width="1.5" stroke-dasharray="5 4" pointer-events="none"/>`;
+  }
+  const k = doc.iconScale;
+  if (ui.sels.length) return `<g pointer-events="none">${selObjs().map(o => ring(o, k)).join('')}</g>` + out;
+  const o = getSel(); if (!o) return out;
+  const hr = handleR();
+  if (o.type === 'text') {
+    const hw = (textHalfW(o) + 6) * k, hh = ((o.size || 18) / 2 + 5) * k;
+    return `<g pointer-events="none">${ring(o, k)}</g><g data-handle="ts"><rect x="${f(o.x + hw - hr * 0.8)}" y="${f(o.y + hh - hr * 0.8)}" width="${f(hr * 1.6)}" height="${f(hr * 1.6)}" rx="2" fill="#fff" stroke="#1f5fbf" stroke-width="${f(hr / 3)}" style="cursor:nwse-resize"/></g>` + out;
+  }
+  if (isLine(o)) {
+    const h = (name, x, y, fill) => `<g data-handle="${name}"><circle cx="${f(x)}" cy="${f(y)}" r="${f(hr)}" fill="${fill}" stroke="#1f5fbf" stroke-width="${f(hr / 3)}"/></g>`;
+    if (o.type === 'zone') return h('p1', o.x1, o.y1, '#fff') + h('p2', o.x2, o.y2, '#fff');
+    const [mx, my] = qpt(0.5, o);
+    return h('p1', o.x1, o.y1, '#fff') + h('p2', o.x2, o.y2, '#fff') + h('c', mx, my, '#f2c230');
+  }
+  return `<g pointer-events="none">${ring(o, k)}</g>` + out;
+}
+function renderBoard() {
+  board.setAttribute('viewBox', `0 0 ${W} ${f(courtH(doc.court))}`);
+  board.innerHTML = boardContent(doc.court, step(), doc.iconScale, true) + overlay();
+  board.classList.toggle('placing', ui.tool !== 'select');
+}
+function iconSVG(type) {
+  if (LINES[type]) {
+    const l = { type, x1: -16, y1: 10, x2: 16, y2: -10, cx: -2, cy: -14, color: 'currentColor' };
+    if (type === 'zone') { Object.assign(l, { x1: -15, y1: -11, x2: 15, y2: 11 }); }
+    const s = lineSVG(l, false).replace(/stroke-width="3"/g, 'stroke-width="2.4"').replace('stroke-dasharray="9 7"', 'stroke-dasharray="5 4"');
+    return `<svg viewBox="-22 -22 44 44" aria-hidden="true">${s}</svg>`;
+  }
+  const it = { type, team: ui.team, label: type === 'player' ? '1' : type === 'text' ? 'Aa' : '', color: COURTS[doc.court].ball, size: 16 };
+  const fit = { ladder: 0.5, mat: 0.55, goal: 0.75, hoop: 1, text: 1 }[type] || 1.2;
+  const rot = type === 'ladder' || type === 'goal' || type === 'kick' ? 90 : 0;
+  return `<svg viewBox="-22 -22 44 44" aria-hidden="true"><g font-family='${FONT}' transform="rotate(${rot}) scale(${fit})">${shape(it)}</g></svg>`;
+}
+const KEYS = { v: 'select', s: 'player', t: 'teacher', c: 'cone', b: 'ball', x: 'text', r: 'run', p: 'pass', d: 'dribble', z: 'zone' };
+const keyOf = t => Object.keys(KEYS).find(k => KEYS[k] === t);
+function renderTools() {
+  const btn = (t, name, cls = '') => `<button type="button" class="tool ${cls}" data-tool="${t}" aria-pressed="${ui.tool === t}" title="${name}${keyOf(t) ? `（快捷鍵 ${keyOf(t).toUpperCase()}）` : ''}">${keyOf(t) ? `<kbd class="tkey">${keyOf(t).toUpperCase()}</kbd>` : ''}${t === 'select' ? '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 2l11 7-5 1.2L12.6 16l-2.2 1-2.6-5.6L4 15z" fill="currentColor"/></svg>' : iconSVG(t)}<span>${name}</span></button>`;
+  $('#tools').innerHTML = `
+    <div class="tg"><h3>操作</h3><div class="tg-grid">${btn('select', '選取／移動', 'wide')}</div></div>
+    <div class="tg"><h3>人員</h3><div class="tg-grid">${btn('player', '學生')}${btn('teacher', '老師')}</div>
+      <div class="sw-label">學生隊伍顏色</div>
+      <div class="swatches">${Object.entries(TEAMS).map(([k, t]) => `<button type="button" class="sw" data-team="${k}" style="background:${t.fill}" aria-pressed="${ui.team === k}" title="${t.name}" aria-label="${t.name}"></button>`).join('')}</div></div>
+    <div class="tg"><h3>器材</h3><div class="tg-grid">${['cone', 'disc', 'ball', 'hoop', 'hurdle', 'ladder', 'goal', 'mat', 'kick', 'text'].map(t => btn(t, ITEMS[t].name)).join('')}</div></div>
+    <div class="tg"><h3>路線</h3><div class="tg-grid">${Object.keys(LINES).map(t => btn(t, LINES[t].name)).join('')}</div>
+      <div class="sw-label">線條顏色</div>
+      <div class="swatches">${INKS.map(i => `<button type="button" class="sw" data-ink="${i.c}" style="background:${i.c}" aria-pressed="${ui.ink === i.c}" title="${i.name}" aria-label="${i.name}色"></button>`).join('')}</div></div>`;
+}
+function renderSteps() {
+  $('#steps').innerHTML = doc.steps.map((s, i) => `<button type="button" class="step-tab" role="tab" data-step="${i}" aria-current="${i === doc.cur}"><b>${i + 1}</b>${esc(s.name || '未命名')}</button>`).join('')
+    + `<button type="button" class="step-add" id="btnAddStep" title="複製目前的人和器材位置，開始下一步">＋ 下一步</button>`;
+  $('#stepCount').textContent = `第 ${doc.cur + 1} / ${doc.steps.length} 步`;
+  $('#btnDelStep').disabled = doc.steps.length < 2;
+  const pb = $('#btnPlay');
+  pb.disabled = doc.steps.length < 2 && !anim;
+  pb.title = doc.steps.length < 2 ? '至少要有兩個步驟才能播放' : '從目前步驟開始，依序播放人和球的移動';
+}
+const HINTS = {
+  select: '在空白處拖曳可框選多個物件，<kbd>Shift</kbd>+點選加入或移除，<kbd>Ctrl</kbd>+<kbd>A</kbd> 全選。拖曳任一個選取的物件會一起移動。',
+  player: '點一下放置學生，會依隊伍自動編號；可以連續放置。按 <kbd>V</kbd> 或 <kbd>Esc</kbd> 回到選取。',
+  teacher: '點一下放置老師的位置。',
+  text: '點一下放置文字，再到右側修改內容。',
+  zone: '在場上拖曳出一個區域，例如分站範圍或安全區，右側可以加上名稱。',
+};
+function renderHint() {
+  const t = ui.tool;
+  $('#hint').innerHTML = HINTS[t] || (LINES[t] ? `在場上拖曳畫出${LINES[t].name}路線，放開就完成。起點可以直接從學生身上拉出來。` : `點一下放置${ITEMS[t].name}，可以連續放置。按 <kbd>V</kbd> 或 <kbd>Esc</kbd> 回到選取。`);
+}
+function sizeField(size) {
+  return `<div class="field"><label for="propSize">字級</label><div class="row size-row"><button type="button" class="btn small" data-tstep="-2" aria-label="縮小">A−</button><input id="propSize" type="range" min="${TEXT_MIN}" max="${TEXT_MAX}" step="1" value="${size}"><input id="propSizeNum" type="number" min="${TEXT_MIN}" max="${TEXT_MAX}" value="${size}" aria-label="字級數值"><button type="button" class="btn small" data-tstep="2" aria-label="放大">A＋</button></div></div>`;
+}
+function renderProps() {
+  const box = $('#props'), objs = selObjs(), o = getSel();
+  if (objs.length > 1) {
+    let h = `<div class="prop-head"><span>已選取 ${objs.length} 個物件</span></div>`;
+    if (objs.some(x => x.type === 'player')) h += `<div class="field"><label>學生隊伍</label><div class="swatches" style="margin:0">${Object.entries(TEAMS).map(([k, t]) => `<button type="button" class="sw" data-pteam="${k}" style="background:${t.fill}" aria-label="${t.name}" title="${t.name}"></button>`).join('')}</div></div>`;
+    if (objs.some(x => isLine(x) || x.type === 'text')) h += `<div class="field"><label>線條與文字顏色</label><div class="swatches" style="margin:0">${INKS.map(i => `<button type="button" class="sw" data-pink="${i.c}" style="background:${i.c}" aria-label="${i.name}色" title="${i.name}"></button>`).join('')}</div></div>`;
+    const texts = objs.filter(x => x.type === 'text');
+    if (texts.length) h += sizeField(texts[0].size || 18);
+    h += `<div class="row"><button type="button" class="btn small" data-act="dup">全部複製</button><button type="button" class="btn small danger" data-act="del">全部刪除</button></div>`;
+    h += `<p class="empty" style="margin-top:10px">拖曳任一個選取的物件會一起移動；方向鍵也可以一起微調。</p>`;
+    box.innerHTML = h; return;
+  }
+  if (!o) {
+    box.innerHTML = `<p class="empty">點選場上的人、器材或路線，就能在這裡修改編號、顏色和方向。在空白處拖曳可以框選多個。<br><kbd>V</kbd> 選取工具　<kbd>Ctrl</kbd>+<kbd>Z</kbd> 復原　<kbd>Ctrl</kbd>+<kbd>D</kbd> 複製　<kbd>Delete</kbd> 刪除</p>`;
+    return;
+  }
+  const name = (ITEMS[o.type] || LINES[o.type]).name;
+  let h = `<div class="prop-head">${iconSVG(o.type)}<span>${name}</span></div>`;
+  if (['player', 'text', 'zone', 'mat'].includes(o.type)) {
+    const lab = { player: '編號或名字', text: '文字內容', zone: '區域名稱', mat: '標示文字' }[o.type];
+    h += `<div class="field"><label for="propLabel">${lab}</label><input id="propLabel" type="text" value="${esc(o.label ?? '')}" maxlength="30"></div>`;
+  }
+  if (o.type === 'player') {
+    h += `<div class="field"><label>隊伍</label><div class="swatches" style="margin:0">${Object.entries(TEAMS).map(([k, t]) => `<button type="button" class="sw" data-pteam="${k}" style="background:${t.fill}" aria-pressed="${o.team === k}" aria-label="${t.name}" title="${t.name}"></button>`).join('')}</div></div>`;
+  }
+  if (isLine(o) || o.type === 'text') {
+    h += `<div class="field"><label>顏色</label><div class="swatches" style="margin:0">${INKS.map(i => `<button type="button" class="sw" data-pink="${i.c}" style="background:${i.c}" aria-pressed="${(o.color || '#141414') === i.c}" aria-label="${i.name}色" title="${i.name}"></button>`).join('')}</div></div>`;
+  }
+  if (isLine(o) && o.type !== 'zone') {
+    h += `<div class="field"><label>路線種類</label><div class="seg">${['run', 'pass', 'dribble'].map(t => `<button type="button" data-ltype="${t}" aria-pressed="${o.type === t}">${LINES[t].name}</button>`).join('')}</div></div>`;
+    h += `<div class="field"><div class="row"><button type="button" class="btn small" data-act="straighten">拉直</button><button type="button" class="btn small" data-act="reverse">反轉方向</button></div></div>`;
+  }
+  if (o.type === 'text') {
+    h += sizeField(o.size || 18);
+  }
+  if (ITEMS[o.type]?.rot) {
+    h += `<div class="field"><label>方向（目前 ${((o.rot || 0) % 360 + 360) % 360}°）</label><div class="row"><button type="button" class="btn small" data-rot="-45">向左轉 45°</button><button type="button" class="btn small" data-rot="45">向右轉 45°</button></div></div>`;
+  }
+  h += `<div class="row"><button type="button" class="btn small" data-act="dup">複製</button><button type="button" class="btn small danger" data-act="del">刪除</button></div>`;
+  box.innerHTML = h;
+}
+function syncInputs() {
+  $('#lessonTitle').value = doc.title || '';
+  $('#grade').value = doc.grade || '國中';
+  $('#court').value = doc.court;
+  $('#infoPlayers').value = doc.players || '';
+  $('#infoEquip').value = doc.equipment || '';
+  $('#infoTime').value = doc.duration || '';
+  $('#iconScale').value = doc.iconScale || 1;
+  $('#iconScaleVal').textContent = `${Math.round((doc.iconScale || 1) * 100)}%`;
+  $('#stepName').value = step().name || '';
+  $('#stepNote').value = step().note || '';
+}
+function renderAll() { renderBoard(); renderSteps(); renderProps(); renderHint(); updateHistory(); }
+
+/* ---------- Court select ---------- */
+(() => {
+  const groups = {};
+  for (const [id, c] of Object.entries(COURTS)) (groups[c.group] ||= []).push(`<option value="${id}">${c.name}</option>`);
+  $('#court').innerHTML = Object.entries(groups).map(([gname, opts]) => `<optgroup label="${gname}">${opts.join('')}</optgroup>`).join('');
+})();
+
+/* ---------- Pointer interaction ---------- */
+function pt(e) {
+  const p = board.createSVGPoint(); p.x = e.clientX; p.y = e.clientY;
+  const q = p.matrixTransform(board.getScreenCTM().inverse());
+  return { x: Math.max(0, Math.min(W, q.x)), y: Math.max(0, Math.min(courtH(doc.court), q.y)) };
+}
+function nextLabel(team) {
+  const nums = step().items.filter(o => o.type === 'player' && o.team === team).map(o => parseInt(o.label, 10)).filter(n => !isNaN(n));
+  return String(nums.length ? Math.max(...nums) + 1 : 1);
+}
+let drag = null;
+board.addEventListener('pointerdown', e => {
+  if (e.button !== 0) return;
+  if (anim) { stopAnim(); return; }
+  const p = pt(e);
+  const hEl = e.target.closest('[data-handle]'), gEl = e.target.closest('[data-id]');
+  try { board.setPointerCapture(e.pointerId); } catch (err) {}
+  if (hEl && getSel()) {
+    const o = getSel();
+    drag = { kind: 'handle', which: hEl.dataset.handle, moved: false };
+    if (drag.which === 'ts') { drag.s0 = o.size || 18; drag.d0 = Math.max(4, Math.hypot(p.x - o.x, p.y - o.y)); }
+    return;
+  }
+  const t = ui.tool;
+  if (LINES[t]) {
+    pushUndo();
+    const l = { id: uid(), type: t, x1: p.x, y1: p.y, x2: p.x, y2: p.y, cx: p.x, cy: p.y, auto: true, color: ui.ink };
+    if (t === 'zone') l.label = '';
+    step().items.push(l); selectOne(l.id);
+    drag = { kind: 'new', moved: true };
+    renderBoard(); return;
+  }
+  if (gEl) {
+    const id = gEl.dataset.id;
+    if (e.shiftKey) { const ids = selIds(); setSelection(ids.includes(id) ? ids.filter(x => x !== id) : [...ids, id]); drag = null; renderBoard(); renderProps(); return; }
+    if (!selIds().includes(id)) selectOne(id);
+    drag = { kind: 'move', last: p, moved: false };
+    renderBoard(); renderProps(); return;
+  }
+  if (ITEMS[t]) {
+    pushUndo();
+    const it = { id: uid(), type: t, x: p.x, y: p.y };
+    if (t === 'player') { it.team = ui.team; it.label = nextLabel(ui.team); }
+    if (t === 'ball') it.color = COURTS[doc.court].ball;
+    if (t === 'text') { it.label = '文字'; it.size = 18; it.color = ui.ink; }
+    if (t === 'mat') { it.label = '軟墊'; }
+    if (ITEMS[t].rot) it.rot = 0;
+    step().items.push(it); selectOne(it.id);
+    drag = { kind: 'move', last: p, moved: true };
+    renderBoard(); renderProps(); save(); return;
+  }
+  // Empty space with the select tool: start a box selection (Shift keeps the current selection).
+  const base = e.shiftKey ? selIds() : [];
+  if (!e.shiftKey) clearSel();
+  drag = { kind: 'box', start: p, cur: p, base };
+  renderBoard(); renderProps();
+});
+function boxHits(a, b) {
+  const x0 = Math.min(a.x, b.x), x1 = Math.max(a.x, b.x), y0 = Math.min(a.y, b.y), y1 = Math.max(a.y, b.y);
+  const inside = (x, y) => x >= x0 && x <= x1 && y >= y0 && y <= y1;
+  return step().items.filter(o => {
+    if (o.type === 'zone') return inside(o.x1, o.y1) && inside(o.x2, o.y2);
+    if (isLine(o)) { const [mx, my] = qpt(0.5, o); return inside(mx, my); }
+    return inside(o.x, o.y);
+  }).map(o => o.id);
+}
+board.addEventListener('pointermove', e => {
+  if (!drag) return;
+  const p = pt(e);
+  if (drag.kind === 'box') { drag.cur = p; setSelection([...drag.base, ...boxHits(drag.start, p)]); renderBoard(); return; }
+  if (drag.kind === 'move') {
+    const objs = selObjs(); if (!objs.length) return;
+    const dx = p.x - drag.last.x, dy = p.y - drag.last.y; drag.last = p;
+    if (!dx && !dy) return;
+    if (!drag.moved) { pushUndo(); drag.moved = true; }
+    objs.forEach(o => shiftObj(o, dx, dy)); renderBoard(); return;
+  }
+  const o = getSel(); if (!o) return;
+  if (!drag.moved) { pushUndo(); drag.moved = true; }
+  if (drag.kind === 'new') {
+    o.x2 = p.x; o.y2 = p.y; o.cx = (o.x1 + o.x2) / 2; o.cy = (o.y1 + o.y2) / 2;
+  } else if (drag.kind === 'handle') {
+    // The yellow handle sits on the curve's midpoint; solve for the Bézier control point that puts it there.
+    if (drag.which === 'ts') { o.size = clampSize(drag.s0 * Math.hypot(p.x - o.x, p.y - o.y) / drag.d0); }
+    else if (drag.which === 'c') { o.cx = 2 * p.x - (o.x1 + o.x2) / 2; o.cy = 2 * p.y - (o.y1 + o.y2) / 2; o.auto = false; }
+    else {
+      const k = drag.which === 'p1' ? 1 : 2; o['x' + k] = p.x; o['y' + k] = p.y;
+      if (o.auto) { o.cx = (o.x1 + o.x2) / 2; o.cy = (o.y1 + o.y2) / 2; }
+    }
+  }
+  renderBoard();
+});
+function endDrag() {
+  if (!drag) return;
+  const o = getSel();
+  if (drag.kind === 'new' && o && Math.hypot(o.x2 - o.x1, o.y2 - o.y1) < 10) {
+    step().items = step().items.filter(x => x !== o); clearSel(); undoStack.pop(); updateHistory();
+  }
+  const wasSize = drag.which === 'ts';
+  drag = null; renderBoard();
+  if (wasSize) { const o = getSel(), v = o && (o.size || 18); if ($('#propSize')) { $('#propSize').value = v; $('#propSizeNum').value = v; } } else renderProps();
+  save();
+}
+board.addEventListener('pointerup', endDrag);
+board.addEventListener('pointercancel', endDrag);
+board.addEventListener('dblclick', () => { const i = $('#propLabel'); if (i) { i.focus(); i.select(); } });
+
+/* ---------- Controls ---------- */
+function setTool(t) { stopAnim(); ui.tool = t; renderTools(); renderBoard(); renderHint(); }
+$('#tools').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.tool) setTool(b.dataset.tool);
+  if (b.dataset.team) { ui.team = b.dataset.team; if (ui.tool !== 'player') ui.tool = 'player'; renderTools(); renderBoard(); renderHint(); }
+  if (b.dataset.ink) { ui.ink = b.dataset.ink; renderTools(); }
+});
+$('#props').addEventListener('click', e => {
+  const b = e.target.closest('button'), objs = selObjs(), o = objs[0]; if (!b || !o) return;
+  if (b.dataset.pteam) mutate(() => { objs.filter(x => x.type === 'player').forEach(x => { x.team = b.dataset.pteam; }); });
+  else if (b.dataset.pink) mutate(() => { objs.filter(x => isLine(x) || x.type === 'text').forEach(x => { x.color = b.dataset.pink; }); ui.ink = b.dataset.pink; renderTools(); });
+  else if (b.dataset.tstep) mutate(() => { objs.filter(x => x.type === 'text').forEach(x => { x.size = clampSize((x.size || 18) + +b.dataset.tstep); }); });
+  else if (b.dataset.ltype) mutate(() => { o.type = b.dataset.ltype; });
+  else if (b.dataset.rot) mutate(() => { o.rot = ((o.rot || 0) + +b.dataset.rot + 360) % 360; });
+  else if (b.dataset.act === 'del') deleteSel();
+  else if (b.dataset.act === 'dup') dupSel();
+  else if (b.dataset.act === 'straighten') mutate(() => { o.cx = (o.x1 + o.x2) / 2; o.cy = (o.y1 + o.y2) / 2; o.auto = true; });
+  else if (b.dataset.act === 'reverse') mutate(() => { [o.x1, o.y1, o.x2, o.y2] = [o.x2, o.y2, o.x1, o.y1]; });
+});
+let typingUndo = false;
+document.addEventListener('focusin', e => { if (e.target.matches('input,textarea')) typingUndo = false; });
+function textEdit(fn) { if (!typingUndo) { pushUndo(); typingUndo = true; } fn(); save(); }
+$('#props').addEventListener('input', e => {
+  if (e.target.id === 'propSize' || e.target.id === 'propSizeNum') {
+    const v = +e.target.value; if (!v) return;
+    const size = clampSize(v);
+    textEdit(() => { selObjs().filter(x => x.type === 'text').forEach(x => { x.size = size; }); });
+    if (e.target.id === 'propSize') $('#propSizeNum').value = size; else $('#propSize').value = size;
+    renderBoard(); return;
+  }
+  if (e.target.id !== 'propLabel') return;
+  const o = getSel(); if (!o) return;
+  textEdit(() => { o.label = e.target.value; }); renderBoard();
+});
+function deleteSel() {
+  const objs = selObjs(); if (!objs.length) return;
+  mutate(() => { step().items = step().items.filter(x => !objs.includes(x)); clearSel(); });
+}
+function dupSel() {
+  const objs = selObjs(); if (!objs.length) return;
+  mutate(() => {
+    const copies = objs.map(o => {
+      const c = { ...o, id: uid() };
+      shiftObj(c, 30, 24);
+      if (c.type === 'player' && objs.length === 1) c.label = nextLabel(c.team);
+      step().items.push(c); return c.id;
+    });
+    setSelection(copies);
+  });
+}
+$('#lessonTitle').addEventListener('input', e => textEdit(() => { doc.title = e.target.value; }));
+$('#infoPlayers').addEventListener('input', e => textEdit(() => { doc.players = e.target.value; }));
+$('#infoEquip').addEventListener('input', e => textEdit(() => { doc.equipment = e.target.value; }));
+$('#infoTime').addEventListener('input', e => textEdit(() => { doc.duration = e.target.value; }));
+$('#stepName').addEventListener('input', e => { textEdit(() => { step().name = e.target.value; }); renderSteps(); });
+$('#stepNote').addEventListener('input', e => textEdit(() => { step().note = e.target.value; }));
+$('#grade').addEventListener('change', e => mutate(() => { doc.grade = e.target.value; }));
+$('#iconScale').addEventListener('input', e => { textEdit(() => { doc.iconScale = +e.target.value; }); $('#iconScaleVal').textContent = `${Math.round(doc.iconScale * 100)}%`; renderBoard(); });
+$('#court').addEventListener('change', e => mutate(() => {
+  doc.court = e.target.value; const H = courtH(doc.court);
+  for (const s of doc.steps) for (const o of s.items) {
+    if (isLine(o)) { o.y1 = Math.min(o.y1, H); o.y2 = Math.min(o.y2, H); o.cy = Math.min(o.cy, H); }
+    else o.y = Math.min(o.y, H - 10);
+  }
+  renderTools();
+}));
+$('#steps').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.id === 'btnAddStep') {
+    mutate(() => {
+      // Keep ids so the animation knows which object in the next step is the same one.
+      const items = step().items.filter(o => !isLine(o) || o.type === 'zone').map(o => ({ ...o }));
+      doc.steps.splice(doc.cur + 1, 0, { id: uid(), name: '', note: '', items }); doc.cur++; clearSel();
+    });
+    syncInputs(); $('#stepName').focus(); return;
+  }
+  if (b.dataset.step) { stopAnim(); doc.cur = +b.dataset.step; clearSel(); syncInputs(); renderAll(); save(); }
+});
+$('#btnDelStep').addEventListener('click', () => {
+  if (doc.steps.length < 2) return;
+  mutate(() => { doc.steps.splice(doc.cur, 1); doc.cur = Math.max(0, doc.cur - 1); clearSel(); }); syncInputs();
+});
+$('#btnClearStep').addEventListener('click', () => mutate(() => { step().items = []; clearSel(); }));
+$('#btnUndo').addEventListener('click', doUndo);
+$('#btnRedo').addEventListener('click', doRedo);
+
+document.addEventListener('keydown', e => {
+  if (e.target.matches && e.target.matches('input:not([type=range]),textarea,select')) return;
+  const mod = e.ctrlKey || e.metaKey;
+  if (mod && e.key.toLowerCase() === 'z') { e.preventDefault(); e.shiftKey ? doRedo() : doUndo(); return; }
+  if (mod && e.key.toLowerCase() === 'y') { e.preventDefault(); doRedo(); return; }
+  if (mod && e.key.toLowerCase() === 'd') { e.preventDefault(); dupSel(); return; }
+  if (e.key === 'Escape') { if (!$('#exportModal').hidden || !$('#tplModal').hidden || !$('#saveModal').hidden) { closeModals(); return; } clearSel(); setTool('select'); renderProps(); return; }
+  if (mod && e.key.toLowerCase() === 'a') { e.preventDefault(); setTool('select'); setSelection(step().items.map(o => o.id)); renderBoard(); renderProps(); return; }
+  if (e.key === 'Delete' || e.key === 'Backspace') { if (selIds().length) { e.preventDefault(); deleteSel(); } return; }
+  if (!mod && !e.altKey && KEYS[e.key.toLowerCase()]) { setTool(KEYS[e.key.toLowerCase()]); return; }
+  const texts = selObjs().filter(x => x.type === 'text');
+  if (!mod && (e.key === '[' || e.key === ']') && texts.length) {
+    e.preventDefault(); mutate(() => texts.forEach(x => { x.size = clampSize((x.size || 18) + (e.key === ']' ? 2 : -2)); })); return;
+  }
+  const arrows = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+  const objs = selObjs();
+  if (arrows[e.key] && objs.length) {
+    e.preventDefault(); const [dx, dy] = arrows[e.key].map(v => v * (e.shiftKey ? 10 : 2));
+    if (!e.repeat) pushUndo();
+    objs.forEach(o => shiftObj(o, dx, dy));
+    renderBoard(); save();
+  }
+});
+window.addEventListener('resize', () => { if (selIds().length) renderBoard(); });
+
+/* ---------- Step animation ---------- */
+let anim = null;
+const ease = t => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+const sameZone = (a, b) => a.id === b.id && ['x1', 'y1', 'x2', 'y2'].every(k => Math.abs(a[k] - b[k]) < 0.5);
+
+// Pair each object in the next step with the same object in the previous one:
+// by id, then (for people) by team + number, then nearest object of the same kind.
+function matchItems(A, B) {
+  const pa = A.filter(o => !isLine(o)), pb = B.filter(o => !isLine(o));
+  const used = new Set(), map = new Map();
+  for (const b of pb) { const a = pa.find(a => !used.has(a) && a.id === b.id && a.type === b.type); if (a) { used.add(a); map.set(b, a); } }
+  for (const b of pb) {
+    if (map.has(b) || (b.type !== 'player' && b.type !== 'teacher')) continue;
+    const a = pa.find(a => !used.has(a) && a.type === b.type && (a.team || '') === (b.team || '') && String(a.label ?? '') === String(b.label ?? ''));
+    if (a) { used.add(a); map.set(b, a); }
+  }
+  const pairs = [];
+  for (const b of pb) {
+    if (map.has(b)) continue;
+    for (const a of pa) if (!used.has(a) && a.type === b.type && (a.type !== 'text' || a.label === b.label)) pairs.push([Math.hypot(a.x - b.x, a.y - b.y), a, b]);
+  }
+  pairs.sort((p, q) => p[0] - q[0]);
+  for (const [, a, b] of pairs) if (!used.has(a) && !map.has(b)) { used.add(a); map.set(b, a); }
+  return { map, gone: pa.filter(a => !used.has(a)), appear: pb.filter(b => !map.has(b)) };
+}
+// If an arrow in the previous step starts at this object and ends where it lands, travel along that arrow.
+function findPath(a, b, lines) {
+  const ball = a.type === 'ball', thrS = ball ? 80 : 45, thrE = ball ? 80 : 60;
+  let best = null, bs = Infinity;
+  for (const l of lines) {
+    if (l.type === 'zone' || (!ball && l.type === 'pass')) continue;
+    const ds = Math.hypot(l.x1 - a.x, l.y1 - a.y), de = Math.hypot(l.x2 - b.x, l.y2 - b.y);
+    if (ds < thrS && de < thrE && ds + de < bs) { best = l; bs = ds + de; }
+  }
+  return best;
+}
+function planTransition(i) {
+  const A = doc.steps[i].items, B = doc.steps[i + 1].items, lines = A.filter(isLine);
+  const { map, gone, appear } = matchItems(A, B);
+  const moves = [...map].map(([b, a]) => ({ a, b, path: findPath(a, b, lines) }));
+  const zA = A.filter(o => o.type === 'zone'), zB = B.filter(o => o.type === 'zone');
+  return {
+    moves, gone, appear,
+    zonesKeep: zB.filter(b => zA.some(a => sameZone(a, b))),
+    zonesOut: zA.filter(a => !zB.some(b => sameZone(a, b))),
+    zonesIn: zB.filter(b => !zA.some(a => sameZone(a, b))),
+    linesOut: lines.filter(l => l.type !== 'zone'),
+  };
+}
+function posAt(m, e) {
+  const { a, b, path: l } = m;
+  let x, y;
+  if (l) { const [px, py] = qpt(e, l); x = px + (a.x - l.x1) * (1 - e) + (b.x - l.x2) * e; y = py + (a.y - l.y1) * (1 - e) + (b.y - l.y2) * e; }
+  else { x = a.x + (b.x - a.x) * e; y = a.y + (b.y - a.y) * e; }
+  let ra = a.rot || 0, rb = b.rot || 0, d = ((rb - ra + 540) % 360) - 180;
+  return { ...b, x, y, rot: ra + d * e };
+}
+function composite(zones, lines, items, k) {
+  const op = (svg, o) => o >= 0.999 ? svg : o <= 0.001 ? '' : `<g opacity="${o.toFixed(3)}">${svg}</g>`;
+  const its = items.filter(([o]) => o.type !== 'text').concat(items.filter(([o]) => o.type === 'text'));
+  return `<g font-family='${FONT}'>${courtSVG(doc.court)}${zones.map(([o, v]) => op(lineSVG(o, false), v)).join('')}${lines.map(([o, v]) => op(lineSVG(o, false), v)).join('')}${its.map(([o, v]) => op(itemSVG(o, k, false), v)).join('')}</g>`;
+}
+function caption(i) {
+  const s = `步驟 ${i + 1}・${doc.steps[i].name || '未命名'}`;
+  const w = [...s].reduce((n, ch) => n + (/[\u0000-ÿ]/.test(ch) ? 8.5 : 16), 0) + 28;
+  return `<g font-family='${FONT}' pointer-events="none"><rect x="14" y="14" width="${w}" height="32" rx="16" fill="rgba(16,24,28,0.82)"/><text x="28" y="30.5" font-size="16" font-weight="700" fill="#fff" dominant-baseline="central">${esc(s)}</text></g>`;
+}
+function animFrame(now) {
+  if (!anim) return;
+  const sp = +$('#speed').value || 1, HOLD = 1500 / sp, MOVE = 1700 / sp, k = doc.iconScale;
+  let t = now - anim.t0, i = anim.start;
+  while (true) {
+    if (t < HOLD) { // show step i with its arrows
+      const st = doc.steps[i].items, fade = Math.min(1, t / 250);
+      board.innerHTML = composite(st.filter(o => o.type === 'zone').map(o => [o, 1]), st.filter(o => isLine(o) && o.type !== 'zone').map(o => [o, i === anim.start ? 1 : fade]), st.filter(o => !isLine(o)).map(o => [o, 1]), k) + caption(i);
+      if (doc.cur !== i) { doc.cur = i; renderSteps(); }
+      break;
+    }
+    t -= HOLD;
+    if (i >= doc.steps.length - 1) { stopAnim(); return; }
+    if (t < MOVE) { // move from step i to i+1
+      const p = anim.plans[i] ||= planTransition(i), e = ease(t / MOVE);
+      board.innerHTML = composite(
+        [...p.zonesKeep.map(o => [o, 1]), ...p.zonesOut.map(o => [o, 1 - e]), ...p.zonesIn.map(o => [o, e])],
+        p.linesOut.map(o => [o, Math.max(0, 1 - e * 3)]),
+        [...p.moves.map(m => [posAt(m, e), 1]), ...p.gone.map(o => [o, 1 - e]), ...p.appear.map(o => [o, e])], k) + caption(e < 0.5 ? i : i + 1);
+      break;
+    }
+    t -= MOVE; i++;
+  }
+  anim.raf = requestAnimationFrame(animFrame);
+}
+function startAnim() {
+  if (doc.steps.length < 2) return;
+  clearSel(); renderProps();
+  const start = doc.cur >= doc.steps.length - 1 ? 0 : doc.cur;
+  anim = { start, t0: performance.now(), plans: {} };
+  board.classList.add('animating');
+  const pb = $('#btnPlay'); pb.textContent = '■ 停止'; pb.setAttribute('aria-pressed', 'true');
+  $('#hint').textContent = '播放中：人和球會沿著上一步畫的箭頭移動。點畫面或按「停止」結束。';
+  anim.raf = requestAnimationFrame(animFrame);
+}
+function stopAnim() {
+  if (!anim) return;
+  cancelAnimationFrame(anim.raf); anim = null;
+  board.classList.remove('animating');
+  const pb = $('#btnPlay'); pb.textContent = '▶ 播放動畫'; pb.setAttribute('aria-pressed', 'false');
+  syncInputs(); renderAll();
+}
+$('#btnPlay').addEventListener('click', () => anim ? stopAnim() : startAnim());
+
+/* ---------- Export ---------- */
+function wrapText(str, maxUnits) {
+  const out = [];
+  for (const para of String(str || '').split(/\n/)) {
+    let line = '', u = 0;
+    for (const ch of para) {
+      const w = /[\u0000-ÿ]/.test(ch) ? 0.55 : 1;
+      if (u + w > maxUnits) { out.push(line); line = ''; u = 0; }
+      line += ch; u += w;
+    }
+    out.push(line);
+  }
+  return out.filter((l, i, a) => l.length || (i > 0 && i < a.length - 1));
+}
+function exportSVG(indices, withNotes) {
+  const pad = 40, WW = W + pad * 2, H = courtH(doc.court);
+  let y = pad, body = '';
+  const meta = [doc.grade, COURTS[doc.court].name, doc.players && `人數：${doc.players}`, doc.equipment && `器材：${doc.equipment}`, doc.duration && `時間：${doc.duration}`].filter(Boolean);
+  body += `<text x="${pad}" y="${y + 30}" font-size="30" font-weight="700" fill="#16232a">${esc(doc.title || '體育教案')}</text>`;
+  const metaLines = wrapText(meta.join('｜'), 62);
+  metaLines.forEach((l, i) => { body += `<text x="${pad}" y="${y + 60 + i * 22}" font-size="15" fill="#4f5d63">${esc(l)}</text>`; });
+  y += 60 + metaLines.length * 22 + 10;
+  for (const i of indices) {
+    const st = doc.steps[i];
+    if (doc.steps.length > 1 || st.name) {
+      body += `<rect x="${pad}" y="${y}" width="30" height="30" rx="15" fill="#16232a"/><text x="${pad + 15}" y="${y + 15.5}" font-size="16" font-weight="700" fill="#fff" text-anchor="middle" dominant-baseline="central">${i + 1}</text><text x="${pad + 42}" y="${y + 22}" font-size="20" font-weight="700" fill="#16232a">${esc(st.name || `步驟 ${i + 1}`)}</text>`;
+      y += 42;
+    }
+    body += `<svg x="${pad}" y="${y}" width="${W}" height="${f(H)}" viewBox="0 0 ${W} ${f(H)}">${boardContent(doc.court, st, doc.iconScale, false)}</svg>`;
+    y += H + 16;
+    if (withNotes && st.note) {
+      const lines = wrapText(st.note, 56);
+      lines.forEach((l, j) => { body += `<text x="${pad}" y="${y + 18 + j * 27}" font-size="17" fill="#26343a">${esc(l)}</text>`; });
+      y += lines.length * 27 + 8;
+    }
+    y += 18;
+  }
+  const leg = [['run', '跑動'], ['pass', '傳球'], ['dribble', '運球']];
+  let lx = pad;
+  for (const [t, n] of leg) {
+    body += lineSVG({ type: t, x1: lx, y1: y + 10, x2: lx + 54, y2: y + 10, cx: lx + 27, cy: y + 10, color: '#16232a' }, false);
+    body += `<text x="${lx + 64}" y="${y + 15}" font-size="15" fill="#4f5d63">${n}</text>`;
+    lx += 140;
+  }
+  y += 30 + pad / 2;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${WW}" height="${Math.ceil(y)}" viewBox="0 0 ${WW} ${Math.ceil(y)}" font-family='${FONT}'><rect width="100%" height="100%" fill="#ffffff"/>${body}</svg>`;
+}
+let exportBlob = null, exportAll = false;
+function buildExport() {
+  exportBlob = null;
+  const svg = exportSVG(exportAll ? doc.steps.map((_, i) => i) : [doc.cur], exportAll);
+  const img = new Image();
+  img.onload = () => {
+    const cv = document.createElement('canvas'), sc = 2;
+    cv.width = img.width * sc; cv.height = img.height * sc;
+    const ctx = cv.getContext('2d'); ctx.scale(sc, sc); ctx.drawImage(img, 0, 0);
+    try { $('#expImg').src = cv.toDataURL('image/png'); cv.toBlob(b => { exportBlob = b; }, 'image/png'); }
+    catch (err) { $('#expImg').src = img.src; }
+  };
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+}
+function setExpMode(all) { exportAll = all; $('#expCur').setAttribute('aria-pressed', !all); $('#expAll').setAttribute('aria-pressed', all); buildExport(); }
+$('#btnExport').addEventListener('click', () => { clearSel(); renderBoard(); renderProps(); $('#exportModal').hidden = false; $('#expMsg').textContent = '在圖片上按右鍵（手機長按）可以「另存圖片」，或按「複製圖片」直接貼進 Word、Google 文件或簡報。'; setExpMode(exportAll); });
+$('#expCur').addEventListener('click', () => setExpMode(false));
+$('#expAll').addEventListener('click', () => setExpMode(true));
+$('#btnCopyImg').addEventListener('click', () => {
+  const msg = $('#expMsg');
+  const fail = () => { msg.textContent = '這裡沒辦法直接複製。請在圖片上按右鍵（手機長按），選「複製圖片」或「另存圖片」。'; };
+  try {
+    if (!exportBlob || !window.ClipboardItem) return fail();
+    navigator.clipboard.write([new ClipboardItem({ 'image/png': exportBlob })]).then(() => { msg.textContent = '已複製圖片，可以直接貼到 Word、Google 文件或簡報。'; }, fail);
+  } catch (err) { fail(); }
+});
+
+/* ---------- Template library (my templates in the viewer's account, shared school library) ---------- */
+const LKEY = 'pe-board-mytpl-v1';
+const lib = { db: null, uid: null, user: null, dl: null, ready: false, canShare: false,
+  mine: [], shared: [], folders: [], view: 'builtin', folder: null, q: '', court: '', grade: '',
+  renaming: null, newFolder: false, renamingFolder: false, lastFolder: '' };
+const toast = msg => { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(() => { t.hidden = true; }, 2600); };
+function loadLocalLib() {
+  try { const d = JSON.parse(localStorage.getItem(LKEY) || '{}'); lib.mine = Array.isArray(d.mine) ? d.mine : []; lib.folders = Array.isArray(d.folders) ? d.folders : []; } catch (e) {}
+}
+function persistLocal() { try { localStorage.setItem(LKEY, JSON.stringify({ mine: lib.mine, folders: lib.folders })); } catch (e) {} }
+const libReady = (async () => {
+  try {
+    const c = window.claude;
+    if (!c || !c.use) { loadLocalLib(); return; }
+    const [db, user, dl] = await Promise.all([c.use('db'), c.use('user'), c.use('downloads')]);
+    lib.dl = dl; lib.user = user;
+    const id = user ? await user.id() : null;
+    if (!db || !id) { loadLocalLib(); return; }
+    lib.db = db; lib.uid = id;
+    lib.canShare = (await user.can('data.write')) !== false;
+    // A viewer with view-only access cannot write to the shared store, so their own templates stay in this browser.
+    if (!lib.canShare) { lib.personalLocal = true; loadLocalLib(); }
+    else db.collection('data/users/' + id).onSnapshot(snap => {
+      const mine = []; let folders = [];
+      for (const d of snap.docs) { const v = d.data(); if (d.id === 'meta') folders = Array.isArray(v.folders) ? [...v.folders] : []; else if (v.kind === 'tpl') mine.push({ ...v, id: d.id }); }
+      lib.mine = mine; lib.folders = folders; refreshLib();
+    }, () => { toast('暫時連不到範本資料，稍後重新整理頁面再試。'); });
+    lib.isOwner = await user.isOwner();
+    // Each teacher's shared templates live under pub/<their id>/items; the access rules let only that teacher
+    // (and the page owner, as moderator) write there. pub/<id> itself marks who has shared something.
+    db.collection('pub').onSnapshot(snap => { lib.sharers = snap.docs.map(d => d.id); loadShared(); }, () => {});
+  } catch (e) { loadLocalLib(); }
+})().finally(() => { lib.ready = true; refreshLib(); });
+
+let sharedToken = 0;
+async function loadShared() {
+  if (!lib.db) return;
+  const token = ++sharedToken, out = [];
+  for (const sid of (lib.sharers || []).slice(0, 100)) {
+    try {
+      const snap = await lib.db.collection(`pub/${sid}/items`).orderBy('updatedAt', 'desc').limit(100).get();
+      for (const d of snap.docs) { const v = d.data(); if (v.kind === 'tpl') out.push({ ...v, id: d.id, author: sid }); }
+    } catch (e) {}
+  }
+  if (token !== sharedToken) return;
+  lib.shared = out.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)); refreshLib();
+}
+const cloudMine = () => !!lib.db && !lib.personalLocal;
+async function saveTpl(t) {
+  await libReady;
+  t = { ...t, kind: 'tpl', updatedAt: Date.now() };
+  if (cloudMine()) { const { id, ...body } = t; await lib.db.collection('data/users/' + lib.uid).doc(id).set(body); }
+  else { const i = lib.mine.findIndex(x => x.id === t.id); if (i >= 0) lib.mine[i] = t; else lib.mine.push(t); persistLocal(); refreshLib(); }
+  return t;
+}
+async function deleteTpl(id) {
+  if (cloudMine()) await lib.db.collection('data/users/' + lib.uid).doc(id).delete();
+  else { lib.mine = lib.mine.filter(t => t.id !== id); persistLocal(); refreshLib(); }
+}
+async function saveFolders(folders) {
+  lib.folders = [...new Set(folders.filter(Boolean))];
+  if (cloudMine()) await lib.db.collection('data/users/' + lib.uid).doc('meta').set({ folders: lib.folders });
+  else { persistLocal(); refreshLib(); }
+}
+const allFolders = () => [...new Set([...lib.folders, ...lib.mine.map(t => t.folder || '').filter(Boolean)])].sort((a, b) => a.localeCompare(b, 'zh-Hant'));
+const errText = e => e && e.code === 'quota_exceeded' ? '範本空間已滿，請先刪除一些不用的範本。' : '沒有存成功，請稍後再試一次。';
+
+function normalizeDoc(d) {
+  d = JSON.parse(JSON.stringify(d || {}));
+  if (!COURTS[d.court]) d.court = 'gym';
+  if (!Array.isArray(d.steps) || !d.steps.length) d.steps = [{ id: uid(), name: '', note: '', items: [] }];
+  d.steps = d.steps.map(s => ({ id: s.id || uid(), name: s.name || '', note: s.note || '', items: Array.isArray(s.items) ? s.items.filter(o => o && (ITEMS[o.type] || LINES[o.type])) : [] }));
+  d.cur = 0; d.iconScale = +d.iconScale || 1;
+  for (const k of ['title', 'grade', 'players', 'equipment', 'duration']) d[k] = typeof d[k] === 'string' ? d[k] : '';
+  if (!d.grade) d.grade = '國中';
+  delete d.srcTpl;
+  return d;
+}
+const tplFromDoc = (d, extra) => { const n = normalizeDoc(d); return { name: n.title || '未命名教案', court: n.court, grade: n.grade, steps: n.steps.length, doc: n, folder: '', ...extra }; };
+let builtinDocs = null;
+const getBuiltinDocs = () => builtinDocs ||= TEMPLATES.map(docFromTemplate);
+
+function openDoc(d, srcTpl) {
+  stopAnim(); pushUndo();
+  doc = normalizeDoc(d); if (srcTpl) doc.srcTpl = srcTpl;
+  clearSel(); closeModals(); syncInputs(); renderTools(); renderAll(); save();
+}
+function thumb(d) {
+  if (!d || !COURTS[d.court] || !d.steps || !d.steps[0]) return '<svg viewBox="0 0 10 6"></svg>';
+  return `<svg viewBox="0 0 ${W} ${f(courtH(d.court))}" preserveAspectRatio="xMidYMid meet">${boardContent(d.court, d.steps[0], d.iconScale || 1, false)}</svg>`;
+}
+function libList() {
+  let arr;
+  if (lib.view === 'builtin') arr = TEMPLATES.map((t, i) => ({ id: 'b' + i, builtin: i, name: t.title, grade: t.grade, court: t.court, doc: getBuiltinDocs()[i] }));
+  else if (lib.view === 'shared') arr = lib.shared;
+  else arr = lib.mine.filter(t => lib.folder === null || (t.folder || '') === lib.folder);
+  const q = lib.q.trim().toLowerCase();
+  arr = arr.filter(t => (!q || (t.name || '').toLowerCase().includes(q) || (t.folder || '').toLowerCase().includes(q)) && (!lib.court || t.court === lib.court) && (!lib.grade || t.grade === lib.grade));
+  if (lib.view !== 'builtin') arr = [...arr].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+  return arr;
+}
+function renderLibNav() {
+  const cnt = fn => lib.mine.filter(fn).length;
+  const nb = (label, n, attrs, cur, sub) => `<button type="button" class="nav-btn${sub ? ' sub' : ''}" ${attrs} aria-current="${cur}"><span>${label}</span><small>${n}</small></button>`;
+  let h = nb('內建範本', TEMPLATES.length, 'data-view="builtin"', lib.view === 'builtin');
+  h += `<div class="nav-h">我的範本</div>`;
+  h += nb('全部', lib.mine.length, 'data-view="mine" data-folder="*"', lib.view === 'mine' && lib.folder === null);
+  for (const fd of allFolders()) h += nb(esc(fd), cnt(t => t.folder === fd), `data-view="mine" data-folder="${esc(fd)}"`, lib.view === 'mine' && lib.folder === fd, true);
+  if (cnt(t => !t.folder)) h += nb('未分類', cnt(t => !t.folder), 'data-view="mine" data-folder=""', lib.view === 'mine' && lib.folder === '', true);
+  h += lib.newFolder
+    ? `<input type="text" id="newFolderIn" class="nav-in" placeholder="資料夾名稱，按 Enter" maxlength="40">`
+    : `<button type="button" class="nav-btn add" data-act="newFolder">＋ 新資料夾</button>`;
+  if (lib.db) { h += `<div class="nav-h">共用</div>` + nb('學校共用', lib.shared.length, 'data-view="shared"', lib.view === 'shared'); }
+  $('#libNav').innerHTML = h;
+  const nf = $('#newFolderIn'); if (nf) nf.focus();
+}
+function renderLibTools() {
+  const courtOpts = Object.entries(COURTS).map(([id, c]) => `<option value="${id}"${lib.court === id ? ' selected' : ''}>${c.name}</option>`).join('');
+  const grades = ['國小低年級', '國小中年級', '國小高年級', '國中', '高中'].map(g => `<option${lib.grade === g ? ' selected' : ''}>${g}</option>`).join('');
+  let h = `<input type="search" id="libQ" placeholder="搜尋範本名稱" value="${esc(lib.q)}" aria-label="搜尋範本">
+    <select id="libCourt" aria-label="篩選運動"><option value="">全部運動</option>${courtOpts}</select>
+    <select id="libGrade" aria-label="篩選年段"><option value="">全部年段</option>${grades}</select>`;
+  if (lib.view === 'mine') {
+    if (lib.folder) {
+      h += lib.renamingFolder
+        ? `<input type="text" id="folderNameIn" value="${esc(lib.folder)}" maxlength="40" aria-label="新的資料夾名稱">`
+        : `<button type="button" class="btn small" data-act="renameFolder">重新命名資料夾</button><button type="button" class="btn small danger" data-act="delFolder">刪除資料夾</button>`;
+    }
+    h += `<button type="button" class="btn small" data-act="import">匯入範本檔</button><button type="button" class="btn small" data-act="exportFile">匯出${lib.folder ? '這個資料夾' : '全部'}</button>`;
+  }
+  $('#libTools').innerHTML = h;
+  const fi = $('#folderNameIn'); if (fi) { fi.focus(); fi.select(); }
+  const where = !lib.ready ? '正在連線…' : cloudMine() ? '「我的範本」存在你的 Claude 帳號裡，換電腦打開這個頁面也看得到。' : '「我的範本」目前只存在這個瀏覽器裡，建議定期「匯出」範本檔備份。';
+  const hint = lib.view === 'shared' ? '「學校共用」是所有打開這個頁面的老師都看得到的範本。存到我的範本後就可以自由修改。' : lib.view === 'builtin' ? '開啟範本會取代目前的畫面；開錯了按「復原」就能回來。' : where;
+  $('#libMsg').textContent = hint;
+}
+function renderLibGrid() {
+  const arr = libList();
+  const fopts = sel => `<option value=""${!sel ? ' selected' : ''}>未分類</option>` + allFolders().map(fd => `<option value="${esc(fd)}"${sel === fd ? ' selected' : ''}>${esc(fd)}</option>`).join('');
+  let h = '';
+  if (lib.view === 'builtin' && !lib.q && !lib.court && !lib.grade) {
+    h += `<div class="tpl"><button type="button" class="tpl-open" data-open="blank"><svg viewBox="0 0 ${W} ${f(courtH(doc.court))}" preserveAspectRatio="xMidYMid meet">${courtSVG(doc.court)}</svg><strong>空白教案</strong><span>保留目前的場地，從頭開始畫</span></button></div>`;
+  }
+  for (const t of arr) {
+    const meta = `<em class="chip">${esc(t.grade || '')}</em>${esc(COURTS[t.court]?.name || '')}${t.steps || t.doc?.steps?.length ? `・${t.steps || t.doc.steps.length} 步` : ''}`;
+    const name = lib.renaming === t.id
+      ? `<input type="text" class="tpl-rename" data-id="${t.id}" value="${esc(t.name)}" maxlength="40" aria-label="範本名稱">`
+      : `<strong>${esc(t.name || '未命名')}</strong>`;
+    let acts = `<button type="button" data-act="open" data-id="${t.id}">開啟</button>`;
+    if (lib.view === 'mine') {
+      acts += `<select data-act="move" data-id="${t.id}" aria-label="移到資料夾">${fopts(t.folder || '')}</select>`
+        + `<button type="button" data-act="rename" data-id="${t.id}">改名</button><button type="button" data-act="copy" data-id="${t.id}">複製</button>`
+        + (lib.db && lib.canShare ? `<button type="button" data-act="share" data-id="${t.id}">分享到共用</button>` : '')
+        + `<button type="button" class="danger" data-act="del" data-id="${t.id}">刪除</button>`;
+    } else {
+      acts += `<button type="button" data-act="keep" data-id="${t.id}">存到我的範本</button>`;
+      if (lib.view === 'shared' && (t.author === lib.uid || lib.isOwner)) acts += `<button type="button" class="danger" data-act="unshare" data-id="${t.id}">${t.author === lib.uid ? '取消分享' : '移除（管理者）'}</button>`;
+    }
+    const by = lib.view === 'shared' && t.author ? `<span class="by" data-author="${esc(t.author)}"></span>` : '';
+    h += `<div class="tpl"><button type="button" class="tpl-open" data-act="open" data-id="${t.id}" title="開啟">${thumb(t.doc)}</button>${name}<span>${meta}</span>${by}<div class="tpl-actions">${acts}</div></div>`;
+  }
+  if (!arr.length && !(lib.view === 'builtin' && h)) {
+    h = `<p class="empty lib-empty">${lib.view === 'mine'
+      ? (lib.mine.length ? '這裡沒有符合條件的範本。' : '還沒有自己的範本。畫好一份教案後，按上方的「存成範本」，就會出現在這裡。')
+      : lib.view === 'shared' ? '還沒有人分享範本。在「我的範本」按「分享到共用」，同事打開這個頁面就看得到。' : '沒有符合條件的範本。'}</p>`;
+  }
+  $('#tplGrid').innerHTML = h;
+  const ri = document.querySelector('.tpl-rename'); if (ri) { ri.focus(); ri.select(); }
+  if (lib.view === 'shared' && lib.user) {
+    const ids = [...new Set(arr.map(t => t.author).filter(Boolean))];
+    if (ids.length) lib.user.profiles(ids).then(ps => {
+      document.querySelectorAll('[data-author]').forEach(el => { const p = ps[el.dataset.author]; el.textContent = p && p.isMe ? '你分享的' : `由 ${(p && p.name) || '同事'} 分享`; });
+    });
+  }
+}
+function renderLib() { renderLibNav(); renderLibTools(); renderLibGrid(); }
+function refreshLib() {
+  if (!$('#tplModal').hidden) renderLib();
+  if (!$('#saveModal').hidden) fillSaveFolders();
+}
+const findLibItem = id => libList().find(t => t.id === id) || lib.mine.find(t => t.id === id) || lib.shared.find(t => t.id === id);
+function armDanger(b, label, fn) {
+  if (b.dataset.armed) { fn(); return; }
+  const old = b.textContent; b.dataset.armed = '1'; b.textContent = label;
+  setTimeout(() => { if (b.isConnected) { b.textContent = old; delete b.dataset.armed; } }, 3000);
+}
+async function libAct(act, b) {
+  const t = b.dataset.id ? findLibItem(b.dataset.id) : null;
+  try {
+    if (act === 'open' && t) openDoc(t.builtin !== undefined ? docFromTemplate(TEMPLATES[t.builtin]) : t.doc, lib.view === 'mine' ? t.id : null);
+    else if (act === 'rename' && t) { lib.renaming = t.id; renderLibGrid(); }
+    else if (act === 'copy' && t) { await saveTpl({ ...t, id: 't' + uid(), name: `${t.name}（副本）` }); toast('已複製範本'); }
+    else if (act === 'del' && t) armDanger(b, '確定刪除？', async () => { await deleteTpl(t.id); toast(`已刪除「${t.name}」`); });
+    else if (act === 'keep' && t) {
+      const src = t.builtin !== undefined ? docFromTemplate(TEMPLATES[t.builtin]) : t.doc;
+      await saveTpl({ ...tplFromDoc(src, { name: t.name }), id: 't' + uid(), folder: lib.lastFolder });
+      toast(`已存到我的範本${lib.lastFolder ? `「${lib.lastFolder}」` : ''}`);
+    }
+    else if (act === 'share' && t) {
+      const { id, folder, ...body } = t;
+      const now = Date.now();
+      await lib.db.collection(`pub/${lib.uid}/items`).doc('s' + uid()).set({ ...body, kind: 'tpl', updatedAt: now });
+      await lib.db.doc('pub/' + lib.uid).set({ updatedAt: now });
+      await loadShared();
+      toast('已分享到學校共用範本');
+    }
+    else if (act === 'unshare' && t) armDanger(b, '確定取消？', async () => { await lib.db.collection(`pub/${t.author}/items`).doc(t.id).delete(); await loadShared(); toast(t.author === lib.uid ? '已取消分享' : '已從共用範本移除'); });
+    else if (act === 'newFolder') { lib.newFolder = true; renderLibNav(); }
+    else if (act === 'renameFolder') { lib.renamingFolder = true; renderLibTools(); }
+    else if (act === 'delFolder') armDanger(b, '確定刪除？裡面的範本會移到「未分類」', async () => {
+      const name = lib.folder;
+      for (const x of lib.mine.filter(x => x.folder === name)) await saveTpl({ ...x, folder: '' });
+      await saveFolders(lib.folders.filter(x => x !== name)); lib.folder = null; renderLib(); toast(`已刪除資料夾「${name}」`);
+    });
+    else if (act === 'import') $('#importFile').click();
+    else if (act === 'exportFile') exportTemplates();
+  } catch (e) { toast(errText(e)); }
+}
+async function exportTemplates() {
+  const list = lib.mine.filter(t => lib.folder === null || (t.folder || '') === lib.folder);
+  if (!list.length) { toast('這裡還沒有範本可以匯出'); return; }
+  const data = JSON.stringify({ app: 'pe-board', version: 1, exportedAt: new Date().toISOString(), templates: list.map(({ id, kind, ...r }) => r) }, null, 1);
+  const filename = `體育教案範本-${lib.folder || '全部'}.json`;
+  if (lib.dl) {
+    try { await lib.dl.save({ filename, data }); toast(`已匯出 ${list.length} 個範本`); }
+    catch (e) { if (e && e.code !== 'declined') toast('這裡沒辦法下載檔案。'); }
+    return;
+  }
+  try {
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([data], { type: 'application/json' })); a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  } catch (e) { toast('這裡沒辦法下載檔案。'); }
+}
+$('#importFile').addEventListener('change', async e => {
+  const file = e.target.files[0]; e.target.value = ''; if (!file) return;
+  try {
+    const data = JSON.parse(await file.text());
+    const list = Array.isArray(data.templates) ? data.templates : data.steps ? [{ name: data.title, doc: data }] : [];
+    if (!list.length) { toast('這個檔案裡找不到範本。'); return; }
+    const newFolders = [];
+    for (const x of list) {
+      const folder = typeof x.folder === 'string' ? x.folder.slice(0, 40) : '';
+      if (folder) newFolders.push(folder);
+      await saveTpl({ ...tplFromDoc(x.doc, { name: String(x.name || x.doc?.title || '匯入的範本').slice(0, 40) }), id: 't' + uid(), folder });
+    }
+    if (newFolders.length) await saveFolders([...lib.folders, ...newFolders]);
+    toast(`已匯入 ${list.length} 個範本`);
+  } catch (err) { toast('讀不懂這個檔案，請選擇從這裡匯出的 .json 範本檔。'); }
+});
+$('#libNav').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.act) { libAct(b.dataset.act, b); return; }
+  lib.view = b.dataset.view; lib.folder = b.dataset.folder === undefined || b.dataset.folder === '*' ? null : b.dataset.folder;
+  lib.renaming = null; lib.renamingFolder = false; if (lib.folder) lib.lastFolder = lib.folder; renderLib();
+  if (lib.view === 'shared') loadShared();
+});
+$('#libNav').addEventListener('keydown', async e => {
+  if (e.target.id !== 'newFolderIn') return;
+  if (e.key === 'Escape') { e.stopPropagation(); lib.newFolder = false; renderLibNav(); return; }
+  if (e.key !== 'Enter') return;
+  const name = e.target.value.trim(); lib.newFolder = false;
+  if (name) { try { await saveFolders([...lib.folders, name]); lib.view = 'mine'; lib.folder = name; lib.lastFolder = name; } catch (err) { toast(errText(err)); } }
+  renderLib();
+});
+$('#libNav').addEventListener('focusout', e => { if (e.target.id === 'newFolderIn' && !e.target.value.trim()) { lib.newFolder = false; setTimeout(renderLibNav); } });
+$('#libTools').addEventListener('click', e => { const b = e.target.closest('button[data-act]'); if (b) libAct(b.dataset.act, b); });
+$('#libTools').addEventListener('input', e => {
+  if (e.target.id === 'libQ') { lib.q = e.target.value; renderLibGrid(); }
+});
+$('#libTools').addEventListener('change', e => {
+  if (e.target.id === 'libCourt') { lib.court = e.target.value; renderLibGrid(); }
+  if (e.target.id === 'libGrade') { lib.grade = e.target.value; renderLibGrid(); }
+});
+$('#libTools').addEventListener('keydown', async e => {
+  if (e.target.id !== 'folderNameIn') return;
+  if (e.key === 'Escape') { e.stopPropagation(); lib.renamingFolder = false; renderLibTools(); return; }
+  if (e.key !== 'Enter') return;
+  const from = lib.folder, to = e.target.value.trim(); lib.renamingFolder = false;
+  if (to && to !== from) {
+    try {
+      for (const x of lib.mine.filter(x => x.folder === from)) await saveTpl({ ...x, folder: to });
+      await saveFolders(lib.folders.map(x => x === from ? to : x).concat(to));
+      lib.folder = to; lib.lastFolder = to; toast(`資料夾改名為「${to}」`);
+    } catch (err) { toast(errText(err)); }
+  }
+  renderLib();
+});
+$('#tplGrid').addEventListener('click', e => {
+  const b = e.target.closest('[data-act],[data-open]'); if (!b || b.tagName === 'SELECT') return;
+  if (b.dataset.open === 'blank') {
+    openDoc({ title: '', grade: doc.grade, court: doc.court, iconScale: doc.iconScale || 1, steps: [{ id: uid(), name: '', note: '', items: [] }] });
+    return;
+  }
+  libAct(b.dataset.act, b);
+});
+$('#tplGrid').addEventListener('change', async e => {
+  const el = e.target, t = el.dataset.id && lib.mine.find(x => x.id === el.dataset.id); if (!t) return;
+  try {
+    if (el.dataset.act === 'move') { await saveTpl({ ...t, folder: el.value }); toast(el.value ? `已移到「${el.value}」` : '已移到「未分類」'); }
+    if (el.classList.contains('tpl-rename')) { const n = el.value.trim(); lib.renaming = null; if (n && n !== t.name) await saveTpl({ ...t, name: n }); else renderLibGrid(); }
+  } catch (err) { toast(errText(err)); }
+});
+$('#tplGrid').addEventListener('keydown', e => {
+  if (!e.target.classList.contains('tpl-rename')) return;
+  if (e.key === 'Enter') e.target.blur();
+  if (e.key === 'Escape') { e.stopPropagation(); lib.renaming = null; renderLibGrid(); }
+});
+$('#btnTemplates').addEventListener('click', () => { renderLib(); $('#tplModal').hidden = false; });
+
+/* ---------- Save as template ---------- */
+let saveMode = 'new';
+function fillSaveFolders() {
+  const sel = $('#saveFolder'), cur = sel.value;
+  sel.innerHTML = `<option value="">未分類</option>` + allFolders().map(fd => `<option value="${esc(fd)}">${esc(fd)}</option>`).join('') + `<option value="__new">＋ 新資料夾…</option>`;
+  sel.value = [...sel.options].some(o => o.value === cur) ? cur : '';
+}
+function setSaveMode(m) { saveMode = m; document.querySelectorAll('#saveModeField [data-mode]').forEach(b => b.setAttribute('aria-pressed', b.dataset.mode === m)); }
+$('#btnSaveTpl').addEventListener('click', async () => {
+  stopAnim();
+  const src = doc.srcTpl && lib.mine.find(t => t.id === doc.srcTpl);
+  $('#saveName').value = src ? src.name : (doc.title || '');
+  fillSaveFolders(); $('#saveFolder').value = src ? (src.folder || '') : lib.lastFolder;
+  if (![...$('#saveFolder').options].some(o => o.value === $('#saveFolder').value)) $('#saveFolder').value = '';
+  $('#newFolderField').hidden = true; $('#saveNewFolder').value = '';
+  $('#saveModeField').hidden = !src; if (src) $('#saveModeName').textContent = src.name;
+  setSaveMode(src ? 'update' : 'new');
+  $('#saveMsg').textContent = !lib.ready ? '正在連線…' : cloudMine() ? '範本會存在你的 Claude 帳號裡。' : '範本會存在這個瀏覽器裡。';
+  $('#saveModal').hidden = false; $('#saveName').focus(); $('#saveName').select();
+});
+$('#saveFolder').addEventListener('change', e => { $('#newFolderField').hidden = e.target.value !== '__new'; if (e.target.value === '__new') $('#saveNewFolder').focus(); });
+$('#saveModeField').addEventListener('click', e => { const b = e.target.closest('[data-mode]'); if (b) setSaveMode(b.dataset.mode); });
+$('#saveModal').addEventListener('submit', async e => {
+  e.preventDefault();
+  const name = $('#saveName').value.trim() || doc.title || '未命名教案';
+  let folder = $('#saveFolder').value;
+  if (folder === '__new') { folder = $('#saveNewFolder').value.trim(); if (!folder) { $('#saveNewFolder').focus(); return; } }
+  const btn = $('#btnDoSave'); btn.disabled = true; $('#saveMsg').textContent = '儲存中…';
+  try {
+    if (folder && !allFolders().includes(folder)) await saveFolders([...lib.folders, folder]);
+    const id = saveMode === 'update' && doc.srcTpl ? doc.srcTpl : 't' + uid();
+    await saveTpl({ ...tplFromDoc(doc, { name }), id, folder });
+    doc.srcTpl = id; save(); lib.lastFolder = folder;
+    $('#saveModal').hidden = true; $('#saveMsg').textContent = ''; toast(`已存到我的範本${folder ? `「${folder}」` : ''}`);
+  } catch (err) { $('#saveMsg').textContent = errText(err); }
+  finally { btn.disabled = false; }
+});
+
+function closeModals() { $('#exportModal').hidden = true; $('#tplModal').hidden = true; $('#saveModal').hidden = true; lib.renaming = null; lib.newFolder = false; lib.renamingFolder = false; }
+document.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', closeModals));
+document.querySelectorAll('.modal').forEach(m => m.addEventListener('click', e => { if (e.target === m) closeModals(); }));
+
+/* ---------- Boot ---------- */
+syncInputs(); renderTools(); renderAll();
+})();
+</script>

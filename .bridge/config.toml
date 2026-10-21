@@ -1,0 +1,52 @@
+# Bridge 設定檔
+
+[project]
+name = ""
+type = ""            # web | script | app（/elicit 會填）
+
+[checkpoints]
+# 檢查點 1（SPEC）與檢查點 3（demo）一定會停；計畫審核可以關掉
+plan_review = true
+
+[limits]
+max_review_attempts = 3     # 同一任務 review 失敗幾次後停下來找你
+max_verify_rounds = 3       # 驗收失敗→修正 的循環上限
+agent_timeout_sec = 1800
+
+# 各 agent 的呼叫方式。{prompt} 會被替換成提示內容。
+# 指令旗標可能隨版本變動，若執行失敗請以 `claude --help`、`gemini --help` 為準。
+[agents.claude]
+cmd = ["claude", "-p", "{prompt}", "--permission-mode", "acceptEdits",
+       "--allowedTools", "Read,Edit,Write,Glob,Grep,Bash"]
+
+[agents.gemini]
+cmd = ["gemini", "-p", "{prompt}", "--approval-mode", "auto_edit"]
+
+[agents.antigravity]
+# Antigravity 是 IDE，預設由你在 IDE 內執行 workflow（manual）。
+# 如果你有可以 headless 呼叫它的方式，設 manual = false 並填 cmd。
+manual = true
+cmd = []
+
+[roles]
+planner = "claude"          # 寫 PLAN 與拆任務
+critic = "gemini"           # 挑戰 PLAN
+e2e = "antigravity"         # 驗收：antigravity | gemini | claude | none
+fixer = "claude"            # 驗收失敗時，修正任務的預設 owner
+
+# 交叉審查：誰寫的程式由誰審
+[roles.reviewer_for]
+claude = "gemini"
+gemini = "claude"
+antigravity = "claude"
+
+[tests]
+command = ""          # 自動測試指令，例如 "npm test"、"pytest -q"；留空則跳過
+start = ""            # 給 E2E 的啟動方式說明，例如 "npm run dev 後開 http://localhost:5173"
+
+[git]
+auto_commit = true      # 核准檢查點時自動 commit .bridge/ 並打 tag
+commit_per_task = true  # 任務通過審查時 commit 整個工作目錄（git add -A）
+
+[notify]
+cmd = ["notify-send", "Bridge"]   # 需要你介入時的通知；留空 [] 則只印在終端機

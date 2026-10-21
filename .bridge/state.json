@@ -1,0 +1,19 @@
+{
+  "phase": "elicit",
+  "awaiting": "human",
+  "message": "請在 Claude Code 執行 /elicit 開始需求訪談。",
+  "spec_hash": null,
+  "spec_version": 0,
+  "plan_step": "plan",
+  "plan_round": 0,
+  "verify_round": 0,
+  "verify_fails": 0,
+  "pending": [],
+  "metrics": {
+    "spec_rejections": 0,
+    "plan_rejections": 0,
+    "demo_rejections": 0,
+    "change_requests": 0
+  },
+  "history": []
+}
