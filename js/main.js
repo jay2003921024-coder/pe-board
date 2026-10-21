@@ -9,11 +9,14 @@ import { initEditor } from './ui/editor.js';
 import { initProps } from './ui/props.js';
 import { initKeyboard } from './ui/keyboard.js';
 import { initPlayer } from './ui/player.js';
+import { initExporter } from './ui/exporter.js';
+import { initLibrary } from './ui/library.js';
+import { initSaveTpl } from './ui/savetpl.js';
 
 initState(loadDoc() || docFromTemplate(TEMPLATES[0]));
 
-// 後續任務在此加入自己的 init（004：exporter／library／savetpl；005：touch；008：auth／sharearea）。
-const inits = [initBoard, initToolbar, initSteps, initEditor, initProps, initKeyboard, initPlayer];
+// 後續任務在此加入自己的 init（005：touch；008：auth／sharearea）。
+const inits = [initBoard, initToolbar, initSteps, initEditor, initProps, initKeyboard, initPlayer, initExporter, initLibrary, initSaveTpl];
 for (const init of inits) init();
 
 hooks.syncInputs(); hooks.renderTools(); renderAll();
