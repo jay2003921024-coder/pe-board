@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="css/layout.css">
 <link rel="stylesheet" href="css/modals.css">
 <link rel="stylesheet" href="css/touch.css">
+<link rel="stylesheet" href="css/share.css">
 <script type="module" src="js/main.js"></script>
 </head>
 <body>
@@ -27,6 +28,7 @@
     <button class="btn" id="btnTemplates" type="button">範本庫</button>
     <button class="btn" id="btnSaveTpl" type="button">存成範本</button>
     <button class="btn primary" id="btnExport" type="button">匯出圖片</button>
+    <div class="auth" id="authArea" aria-label="登入狀態"></div>
   </header>
 
   <div class="work">
@@ -124,8 +126,32 @@
     <div class="field"><label for="saveName">範本名稱</label><input id="saveName" type="text" maxlength="40" placeholder="例：三人傳切上籃"></div>
     <div class="field"><label for="saveFolder">放進資料夾</label><select id="saveFolder"></select></div>
     <div class="field" id="newFolderField" hidden><label for="saveNewFolder">新資料夾名稱</label><input id="saveNewFolder" type="text" maxlength="40" placeholder="例：七年級 籃球單元"></div>
+    <label class="row check"><input type="checkbox" id="saveAlsoPublish"> 也發布到共享區</label>
     <p class="exp-msg" id="saveMsg"></p>
     <div class="row"><button class="btn primary" id="btnDoSave" type="submit">儲存</button></div>
+  </form>
+</div>
+
+<div class="modal" id="loginPromptModal" hidden>
+  <div class="modal-card narrow" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
+    <div class="modal-head">
+      <h2 id="loginTitle">需要登入</h2>
+      <button class="btn small" type="button" data-close>取消</button>
+    </div>
+    <p class="exp-msg" id="loginMsg">發布到共享區需要用 Google 帳號登入。</p>
+    <div class="row"><button class="btn primary" id="btnPromptLogin" type="button">用 Google 帳號登入</button></div>
+  </div>
+</div>
+
+<div class="modal" id="publishModal" hidden>
+  <form class="modal-card narrow" role="dialog" aria-modal="true" aria-labelledby="publishTitle">
+    <div class="modal-head">
+      <h2 id="publishTitle">發布到共享區</h2>
+      <button class="btn small" type="button" data-close>取消</button>
+    </div>
+    <div class="field"><label for="publishName">範本名稱</label><input id="publishName" type="text" maxlength="40"></div>
+    <p class="exp-msg" id="publishMsg"></p>
+    <div class="row"><button class="btn primary" id="btnDoPublish" type="submit">發布</button></div>
   </form>
 </div>
 

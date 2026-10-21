@@ -2,7 +2,7 @@
 // 以假的 SDK 模組測 js/store/firebase.js 的流程（轉址登入復原、使用者資訊、管理員判斷）。
 import { test, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { initFirebase, getFirebase, getStatus, onStatus, onUser, onResume, signIn, RESUME_KEY, _resetForTest } from '../../js/store/firebase.js';
+import { initFirebase, getFirebase, getStatus, onStatus, onUser, onResume, currentUser, signIn, RESUME_KEY, _resetForTest } from '../../js/store/firebase.js';
 import * as cloud from '../../js/store/cloud.js';
 import { createCloud } from '../../js/store/cloud.js';
 import { ADMIN_EMAILS } from '../../js/config/firebase-config.js';
@@ -114,8 +114,22 @@ test('popup 被擋：存下 resumeIntent 改走 redirect；回來後 onResume �
   const early = [];
   onResume(v => early.push(v));
   await initFirebase();
+  await new Promise(r => setTimeout(r, 5)); // onResume 要等 onAuthStateChanged 的初次回呼設好 currentUser() 才交出（AC-20）
   assert.deepEqual(early, [{ action: 'publish', tplId: 't1' }]);
   assert.equal(store.getItem(RESUME_KEY), null);
+});
+
+test('onResume 觸發時 currentUser() 已經是轉址登入回來的使用者（AC-20：不應再跳一次登入提示）', async () => {
+  const store = memStorage();
+  store.setItem(RESUME_KEY, JSON.stringify({ action: 'publish', tplId: 't1' }));
+  const back = fakeSdk({ redirectUser: { uid: 'u1' }, authUser: { uid: 'u1', displayName: 'Jay' } });
+  _resetForTest({ config: CONFIG, load: back.load, storage: () => store });
+  let userAtResume;
+  onResume(() => { userAtResume = currentUser(); });
+  await initFirebase();
+  await new Promise(r => setTimeout(r, 5));
+  assert.ok(userAtResume, 'onResume 觸發時 currentUser() 不應該是 null');
+  assert.equal(userAtResume.uid, 'u1');
 });
 
 test('onResume 晚註冊也拿得到，但只交出一次；沒有轉址結果時清掉舊的待辦', async () => {
@@ -124,7 +138,9 @@ test('onResume 晚註冊也拿得到，但只交出一次；沒有轉址結果�
   _resetForTest({ config: CONFIG, load: fakeSdk({ redirectUser: { uid: 'u' } }).load, storage: () => store });
   await initFirebase();
   const a = [], b = [];
-  onResume(v => a.push(v)); onResume(v => b.push(v));
+  onResume(v => a.push(v)); // 在 onAuthStateChanged 的初次回呼觸發前訂閱，會收到這次的待辦
+  await new Promise(r => setTimeout(r, 5)); // onResume 要等 onAuthStateChanged 的初次回呼設好 currentUser() 才交出（AC-20）
+  onResume(v => b.push(v)); // 事件已經處理完才訂閱，不會重複收到
   assert.deepEqual(a, [{ action: 'publish' }]); assert.deepEqual(b, []);
 
   store.setItem(RESUME_KEY, JSON.stringify({ action: 'stale' }));

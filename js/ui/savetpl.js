@@ -2,7 +2,7 @@
 import { uid, esc } from '../core/util.js';
 import { tplFromDoc } from '../core/doc.js';
 import { allFolders } from '../core/tplfile.js';
-import { getMine, getFolders, saveTpl, saveFolders, subscribe } from './library-store.js';
+import { getMine, getFolders, saveTpl, saveFolders, subscribe, isCloud } from './library-store.js';
 import { $, state, hooks, save } from './state.js';
 
 let saveMode = 'new', lastFolder = '';
@@ -28,7 +28,8 @@ export function initSaveTpl() {
     $('#newFolderField').hidden = true; $('#saveNewFolder').value = '';
     $('#saveModeField').hidden = !src; if (src) $('#saveModeName').textContent = src.name;
     setSaveMode(src ? 'update' : 'new');
-    $('#saveMsg').textContent = '範本會存在這個瀏覽器裡。';
+    $('#saveMsg').textContent = isCloud() ? '範本會存在你的 Google 帳號。' : '範本會存在這個瀏覽器裡。';
+    $('#saveAlsoPublish').checked = false;
     $('#saveModal').hidden = false; $('#saveName').focus(); $('#saveName').select();
   });
   $('#saveFolder').addEventListener('change', e => { $('#newFolderField').hidden = e.target.value !== '__new'; if (e.target.value === '__new') $('#saveNewFolder').focus(); });
@@ -46,6 +47,7 @@ export function initSaveTpl() {
       await saveTpl({ ...tplFromDoc(doc, { name }), id, folder });
       doc.srcTpl = id; save(); lastFolder = folder;
       $('#saveModal').hidden = true; $('#saveMsg').textContent = '';
+      if ($('#saveAlsoPublish').checked) hooks.startPublish({ kind: 'mine', tplId: id });
     } catch (err) { $('#saveMsg').textContent = err && err.code === 'quota_exceeded' ? '範本空間已滿，請先刪除一些不用的範本。' : '沒有存成功，請稍後再試一次。'; }
     finally { btn.disabled = false; }
   });

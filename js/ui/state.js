@@ -22,6 +22,9 @@ export const hooks = {
   syncInputs: noop, stopAnim: noop,
   // 011 新增：keyboard.js 透過這三個掛勾呼叫 toolbar.js／props.js，不直接互相 import。
   setTool: noop, deleteSel: noop, dupSel: noop,
+  // 008 新增：library.js／savetpl.js 透過這個掛勾呼叫 sharearea.js 開啟發布流程；
+  // sharearea.js 透過這個掛勾呼叫 auth.js 開啟「需要登入」提示，不直接互相 import。
+  startPublish: noop, promptLogin: async () => null,
 };
 
 export const step = () => state.doc.steps[state.doc.cur];

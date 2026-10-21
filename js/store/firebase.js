@@ -54,13 +54,26 @@ async function load() {
     setStatus('offline'); loading = null; // 下次 getFirebase() 會重試
     return null;
   }
-  // 轉址登入回來：一律呼叫 getRedirectResult，成功才把待辦動作交給 UI；其他情況清掉舊的待辦。
+  // 轉址登入回來：一律呼叫 getRedirectResult，成功才記下待辦動作；要等 onAuthStateChanged 的初次回呼
+  // 設好 currentUser() 之後才交給 UI，否則 onResume 訂閱者看到的還會是未登入狀態（AC-20）。
+  let resumeIntent = null;
   try {
     const r = await withTimeout(fb.au.getRedirectResult(fb.auth), opt.timeout);
     const intent = takeResume();
-    if (r?.user && intent) { pendingResume = intent; emit(resumeCbs, intent); }
+    if (r?.user && intent) resumeIntent = intent;
   } catch (e) { takeResume(); console.warn('轉址登入失敗', e); }
-  fb.au.onAuthStateChanged(fb.auth, u => { user = toUser(u); userKnown = true; emit(userCbs, user); });
+  let firstAuth = true;
+  fb.au.onAuthStateChanged(fb.auth, u => {
+    user = toUser(u); userKnown = true; emit(userCbs, user);
+    if (firstAuth) {
+      firstAuth = false;
+      if (resumeIntent) {
+        pendingResume = resumeIntent;
+        emit(resumeCbs, resumeIntent);
+        if (resumeCbs.size) pendingResume = null; // 已經有訂閱者收到了，避免之後晚註冊的再收到一次
+      }
+    }
+  });
   setStatus('ready');
   return fb;
 }

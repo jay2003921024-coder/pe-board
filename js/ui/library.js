@@ -5,15 +5,25 @@ import { boardContent } from '../core/render.js';
 import { TEMPLATES } from '../core/templates.js';
 import { allFolders, parseTemplateFile } from '../core/tplfile.js';
 import { tplFromDoc } from '../core/doc.js';
-import { getMine, getFolders, saveTpl, saveFolders, subscribe } from './library-store.js';
+import { getMine, getFolders, saveTpl, saveFolders, subscribe, isCloud, setToast } from './library-store.js';
 import { libAct, libList, openDoc, errText } from './library-actions.js';
-import { $, state } from './state.js';
+import { $, state, hooks } from './state.js';
 
-// 本任務的分類只有 builtin／mine；008 會在這裡加入 'shared'（學校共用），nav 留了一個空容器給它接。
+// 分類：builtin／mine／shared（共享區，由 sharearea.js 透過 shareHooks 接上，見下方）。
 const lib = { view: 'builtin', folder: null, q: '', court: '', grade: '', renaming: null, newFolder: false, renamingFolder: false, lastFolder: '' };
 
 const toast = msg => { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(() => { t.hidden = true; }, 2600); };
 const ctx = () => ({ lib, getMine, render: renderLib, toast, closeModals: closeAllModals });
+setToast(toast);
+
+// sharearea.js 在 initSharearea() 時填入真正的實作；其他 UI 模組不互相 import（搬自 state.js 的 hooks 作法）。
+export const shareHooks = {
+  renderNav: () => '', open: () => {}, renderTools: () => {}, renderGrid: () => {}, act: () => {},
+};
+export function openSharedTab() {
+  lib.view = 'shared'; lib.folder = null; lib.renaming = null; lib.renamingFolder = false;
+  shareHooks.open(ctx()); renderLib(); $('#tplModal').hidden = false;
+}
 
 function thumb(d) {
   if (!d || !COURTS[d.court] || !d.steps || !d.steps[0]) return '<svg viewBox="0 0 10 6"></svg>';
@@ -32,12 +42,13 @@ function renderLibNav() {
   h += lib.newFolder
     ? `<input type="text" id="newFolderIn" class="nav-in" placeholder="資料夾名稱，按 Enter" maxlength="40">`
     : `<button type="button" class="nav-btn add" data-act="newFolder">＋ 新資料夾</button>`;
-  h += `<div id="libNavShared"></div>`; // 008：共享區入口加在這裡
+  h += `<div id="libNavShared">${shareHooks.renderNav(lib)}</div>`;
   $('#libNav').innerHTML = h;
   const nf = $('#newFolderIn'); if (nf) nf.focus();
 }
 
 function renderLibTools() {
+  if (lib.view === 'shared') { shareHooks.renderTools(ctx()); return; }
   const courtOpts = Object.entries(COURTS).map(([id, c]) => `<option value="${id}"${lib.court === id ? ' selected' : ''}>${c.name}</option>`).join('');
   const grades = ['國小低年級', '國小中年級', '國小高年級', '國中', '高中'].map(g => `<option${lib.grade === g ? ' selected' : ''}>${g}</option>`).join('');
   let h = `<input type="search" id="libQ" placeholder="搜尋範本名稱" value="${esc(lib.q)}" aria-label="搜尋範本">
@@ -55,10 +66,12 @@ function renderLibTools() {
   const fi = $('#folderNameIn'); if (fi) { fi.focus(); fi.select(); }
   $('#libMsg').textContent = lib.view === 'builtin'
     ? '開啟範本會取代目前的畫面；開錯了按「復原」就能回來。'
+    : isCloud() ? '我的範本存在你的 Google 帳號，登入後任何裝置都看得到。'
     : '我的範本目前只存在這個瀏覽器裡，建議定期匯出範本檔備份。';
 }
 
 function renderLibGrid() {
+  if (lib.view === 'shared') { shareHooks.renderGrid(ctx()); return; }
   const mine = getMine();
   const arr = libList(lib, mine);
   const fopts = sel => `<option value=""${!sel ? ' selected' : ''}>未分類</option>` + allFolders(mine, getFolders()).map(fd => `<option value="${esc(fd)}"${sel === fd ? ' selected' : ''}>${esc(fd)}</option>`).join('');
@@ -75,6 +88,7 @@ function renderLibGrid() {
     if (lib.view === 'mine') {
       acts += `<select data-act="move" data-id="${t.id}" aria-label="移到資料夾">${fopts(t.folder || '')}</select>`
         + `<button type="button" data-act="rename" data-id="${t.id}">改名</button><button type="button" data-act="copy" data-id="${t.id}">複製</button>`
+        + `<button type="button" data-act="publish" data-id="${t.id}">發布到共享區</button>`
         + `<button type="button" class="danger" data-act="del" data-id="${t.id}">刪除</button>`;
     }
     h += `<div class="tpl"><button type="button" class="tpl-open" data-act="open" data-id="${t.id}" title="開啟">${thumb(t.doc)}</button>${name}<span>${meta}</span><div class="tpl-actions">${acts}</div></div>`;
@@ -107,7 +121,9 @@ export function initLibrary() {
     const b = e.target.closest('button'); if (!b) return;
     if (b.dataset.act) { libAct(b.dataset.act, b, ctx()); return; }
     lib.view = b.dataset.view; lib.folder = b.dataset.folder === undefined || b.dataset.folder === '*' ? null : b.dataset.folder;
-    lib.renaming = null; lib.renamingFolder = false; if (lib.folder) lib.lastFolder = lib.folder; renderLib();
+    lib.renaming = null; lib.renamingFolder = false; if (lib.folder) lib.lastFolder = lib.folder;
+    if (lib.view === 'shared') shareHooks.open(ctx());
+    renderLib();
   });
   $('#libNav').addEventListener('keydown', async e => {
     if (e.target.id !== 'newFolderIn') return;
@@ -119,7 +135,11 @@ export function initLibrary() {
   });
   $('#libNav').addEventListener('focusout', e => { if (e.target.id === 'newFolderIn' && !e.target.value.trim()) { lib.newFolder = false; setTimeout(renderLibNav); } });
 
-  $('#libTools').addEventListener('click', e => { const b = e.target.closest('button[data-act]'); if (b) libAct(b.dataset.act, b, ctx()); });
+  $('#libTools').addEventListener('click', e => {
+    const b = e.target.closest('button[data-act]'); if (!b) return;
+    if (lib.view === 'shared') { shareHooks.act(b.dataset.act, b, ctx()); return; }
+    libAct(b.dataset.act, b, ctx());
+  });
   $('#libTools').addEventListener('input', e => { if (e.target.id === 'libQ') { lib.q = e.target.value; renderLibGrid(); } });
   $('#libTools').addEventListener('change', e => {
     if (e.target.id === 'libCourt') { lib.court = e.target.value; renderLibGrid(); }
@@ -146,6 +166,8 @@ export function initLibrary() {
       openDoc({ title: '', grade: state.doc.grade, court: state.doc.court, iconScale: state.doc.iconScale || 1, steps: [{ id: uid(), name: '', note: '', items: [] }] });
       closeAllModals(); return;
     }
+    if (b.dataset.act === 'publish') { hooks.startPublish({ kind: 'mine', tplId: b.dataset.id }); return; }
+    if (lib.view === 'shared') { shareHooks.act(b.dataset.act, b, ctx()); return; }
     libAct(b.dataset.act, b, ctx());
   });
   $('#tplGrid').addEventListener('change', async e => {

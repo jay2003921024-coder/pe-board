@@ -2,10 +2,10 @@
 id: 008
 title: 登入列與共享區 UI、我的範本雲端同步
 owner: claude
-status: todo
+status: done
 depends_on: [004, 007]
 reviewer: claude
-attempts: 0
+attempts: 2
 ---
 
 ## 目標
@@ -50,4 +50,32 @@ attempts: 0
 
 ## 交接筆記
 
-<!-- 實作者完成後填寫：做了什麼、怎麼驗證、已知限制 -->
+### 做了什麼
+
+- `js/ui/auth.js`（新增）：頂端 `#authArea` 登入列。依 007 的 `onStatus`/`onUser` 顯示「登入中…」／「登入」（`unconfigured`／`offline` 時停用並帶 `title`）／已登入時顯示 `displayName`＋「登出」。`signIn()` 在 click handler 內同步呼叫（AC-21，popup 不被擋）。也實作「發布需要登入」提示 modal（`#loginPromptModal`），透過 `state.js` 的 `hooks.promptLogin(intent)` 讓 `sharearea.js` 呼叫；按登入前先 `save()` 再呼叫 `signIn(intent)`（AC-20，redirect 前教案已落地）。
+- `js/ui/sharearea.js`（新增）：共享區分頁的搜尋（名稱，client 端）、場地篩選（server 端 `listShared({court})`，換場地即重新抓第一頁）、「載入更多」分頁（AC-29）、卡片顯示縮圖／作者／發布或更新時間（`YYYY/MM/DD HH:mm`）、「開啟」「存到我的範本」；作者本人多「更新為目前教案」「刪除」，`currentUser().isAdmin` 時多「下架」，都用既有 `armDanger` 二次確認。空狀態（AC-26）與離線/錯誤狀態（AC-27，含「重新整理」）。`startPublish(source)`（`{kind:'current'}` 或 `{kind:'mine',tplId}`）：未登入先 `hooks.promptLogin`，拿到使用者後開 `#publishModal` 讓使用者改名稱、確認「會公開給所有人」訊息後呼叫 007 的 `publish()`。`onResume` 收到轉址登入回來的待辦動作時自動呼叫 `openSharedTab()`＋`startPublish(intent)`（AC-20 redirect 路徑）。
+- `js/ui/library.js`：加入 `shareHooks`（`renderNav/open/renderTools/renderGrid/act`，預設 no-op）給 `sharearea.js` 單向接上（UI 模組互不 import，`sharearea.js` 只 import `library.js` 的 `openSharedTab`/`shareHooks`，反向用 `state.js` 的 `hooks.startPublish`）；`renderLibTools/renderLibGrid` 在 `lib.view==='shared'` 時整段委派；「我的範本」卡片加「發布到共享區」按鈕（呼叫 `hooks.startPublish({kind:'mine',tplId})`）；`#libMsg` 依 `isCloud()` 顯示「存在 Google 帳號」或「只存在這個瀏覽器」（AC-28 說明文字）。
+- `js/ui/library-store.js`：加入雲端模式。`onUser` 登入時呼叫 `migrateIfNeeded`：讀雲端 `listMine`，用 `planFirstUpload` 算出本機獨有的範本逐一 `saveMine` 上傳（本機 `pe-board-mytpl-v1` 不刪），用 `planFolderMerge` 合併資料夾後寫回；以 `localStorage['pe-board-migrated-{uid}']` 旗標避免重複上傳；完成後透過 `setToast()`（由 `library.js` 註冊）跳 toast。之後雲端模式下 `saveTpl/deleteTpl` 直接讀寫 `users/{uid}/templates/{id}`，`saveFolders` 一樣先算 `removed` 差集再呼叫 007 的 `saveFolders(uid, next, removed)`（內部用 transaction 合併，不覆蓋）。登出切回本機（`switchToLocal`）。雲端操作失敗（`offline`/其他 error code）會 throw 帶 `.code` 的 Error，沿用既有 `errText()`（已加 `offline` 文案）。
+- `js/ui/savetpl.js`：存成範本 modal 加「也發布到共享區」checkbox，存檔成功後呼叫 `hooks.startPublish({kind:'mine',tplId})`；訊息文字依 `isCloud()` 切換。
+- `js/main.js`：加入 `initAuth`、`initSharearea`；畫布第一次 `renderAll()` 之後才呼叫 007 的 `initFirebase()`（不阻塞開機，AC-27）。
+- `index.html`：頂端加 `#authArea`；新增 `#loginPromptModal`、`#publishModal`；`saveModal` 加「也發布到共享區」checkbox；引入 `css/share.css`。
+- `css/share.css`（新增）：登入列、checkbox、共享區空狀態與「載入更多」卡片樣式，只用 `base.css` 既有變數（`--muted` 等），深色模式沿用既有變數不需另外處理；`@media (pointer:coarse)` 下登入／modal 按鈕與 checkbox 放大到 ≥44px。
+
+### 怎麼驗證
+
+- `npm test`：127 筆全過（含既有 007 的 `share.test.js`、`structure.test.js` 的 400 行與 `js/core` 不碰 DOM 檢查，新檔案都在限制內：`sharearea.js` 183 行、`auth.js` 71 行、`library.js` 200 行）。
+- `node --check` 全部新/改檔案語法通過；另外用 Node 搭配最小 `document`/`localStorage`/`sessionStorage` stub 分別 `import()` `auth.js`、`sharearea.js`、`savetpl.js`、`library.js`，確認模組圖可以解析、沒有匯入/匯出名稱打錯（互相 import 的方向：`sharearea.js → library.js`、`sharearea.js/library.js/savetpl.js → state.js`，符合「UI 模組互不 import、用 hooks 接」的既有慣例，無循環 import）。
+- 用 `python3 -m http.server` 啟動後以 HTTP 確認 `index.html`、`js/main.js`、新增的 `js/ui/auth.js`、`js/ui/sharearea.js`、`css/share.css` 都能正常取得（200）。
+
+### 第二輪修正（回應 `.bridge/reviews/008-r1.md` 的 FAIL）
+
+- 問題：redirect 登入回來時，`js/store/firebase.js` 的 `load()` 在拿到 `getRedirectResult` 後立刻 `emit(resumeCbs, intent)`，但設定 `user`／`userKnown` 的 `onAuthStateChanged` 回呼是非同步觸發，順序顛倒，導致 `sharearea.js` 的 `onResume` 回呼觸發時 `currentUser()` 還是 `null`，`startPublish` 誤判「未登入」又跳出一次登入提示（AC-20、AC-21 違反）。
+- 修法：採 review 建議的做法 1。`js/store/firebase.js`：把轉址結果先存到區域變數 `resumeIntent`，移到 `onAuthStateChanged` 的**初次**回呼內（`user`／`userKnown` 設好之後）才 `pendingResume = resumeIntent; emit(resumeCbs, resumeIntent)`；多加一行：emit 時若 `resumeCbs.size` 非 0（表示已經有訂閱者即時收到），就把 `pendingResume` 清空，避免之後晚註冊的訂閱者又收到一次重複的待辦（原設計「只交出一次」的語意在新時序下需要這一行才成立）。`sharearea.js`／`library.js` 等 008 自己的檔案不用改，問題根因在 007 交付的 `firebase.js`（008 依賴 007；owner 同為 claude，不是跨 agent 任務，改動範圍限定在這一段時序 bug，未動 007 的其他邏輯／Firestore 規則／存取層）。
+- 驗證：`tests/unit/firebase.test.js` 新增一筆測試直接重現 review 給的場景（`onResume` 觸發時檢查 `currentUser()` 是否已經是轉址登入回來的使用者），修法前會失敗、修法後通過；另外兩筆既有的 `onResume` 測試因為事件改成非同步交付，補上 `await new Promise(r => setTimeout(r, 5))` 等到 `onAuthStateChanged` 的初次回呼跑完才斷言（並把「晚註冊」那筆測試的第二個訂閱者改成在等待之後才訂閱，才能驗證「只交出一次」仍成立）。`npm test`：128 筆全過。`node --check js/store/firebase.js` 語法通過；`js/store/firebase.js` 140 行、`tests/unit/firebase.test.js` 164 行，都在 400 行限制內。
+
+### 已知限制
+
+- **沒有實機／瀏覽器驗證**：這個環境沒有瀏覽器自動化工具，所以 Firebase emulator 的完整互動流程（AC-19～29：popup／redirect 兩種登入路徑、兩個瀏覽器設定檔的作者/訪客/管理員情境、斷網情境、資料夾合併、淺色/深色截圖）**尚未實際跑過**，只做了上面列的靜態檢查。PLAN.md 把瀏覽器 E2E 驗收明確排給 006/010（`antigravity_ide`），建議接著跑那一輪驗收，並把 `.bridge/evidence/008/` 的截圖補上。
+- 共享區「依名稱搜尋」只在目前已抓到的分頁（`listShared` 的這一頁，最多到使用者按「載入更多」為止）中做 client 端過濾，不會額外發後端查詢去搜尋尚未載入的更舊範本；場地篩選才是真的重新查詢。對 AC-29（加分項）已足夠，但使用者搜尋罕見名稱、又還沒按「載入更多」時可能顯示「沒有符合條件」。
+- `firebase-config.js` 的 `FIREBASE_CONFIG`／`ADMIN_EMAILS` 仍是 009 的 `REPLACE_ME` 佔位值；在真正設定值進來前，`status` 會停在 `unconfigured`，登入列會停用、共享區會顯示離線提示（這是預期行為，AC-27）。
+- `js/ui/sharearea.js` 的「存到我的範本」目前永遠存一份新 id（不嘗試比對是否已存過同一個共享範本），避免需要額外欄位追蹤來源；使用者若重複按會多出重複的本機範本，可自行刪除。

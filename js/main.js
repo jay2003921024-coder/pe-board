@@ -13,11 +13,16 @@ import { initExporter } from './ui/exporter.js';
 import { initLibrary } from './ui/library.js';
 import { initSaveTpl } from './ui/savetpl.js';
 import { initTouch } from './ui/touch.js';
+import { initAuth } from './ui/auth.js';
+import { initSharearea } from './ui/sharearea.js';
+import { initFirebase } from './store/firebase.js';
 
 initState(loadDoc() || docFromTemplate(TEMPLATES[0]));
 
-// 後續任務在此加入自己的 init（008：auth／sharearea）。
-const inits = [initBoard, initToolbar, initSteps, initEditor, initProps, initKeyboard, initPlayer, initExporter, initLibrary, initSaveTpl, initTouch];
+const inits = [initBoard, initToolbar, initSteps, initEditor, initProps, initKeyboard, initPlayer, initExporter, initLibrary, initSaveTpl, initTouch, initAuth, initSharearea];
 for (const init of inits) init();
 
 hooks.syncInputs(); hooks.renderTools(); renderAll();
+
+// 畫布第一次渲染後才背景初始化 Firebase，不阻塞開機；離線或未設定時共享區與登入列自行顯示提示（AC-27）。
+initFirebase();

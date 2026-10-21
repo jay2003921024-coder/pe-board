@@ -6,7 +6,9 @@ import { serializeTemplates } from '../core/tplfile.js';
 import { saveTpl, deleteTpl, saveFolders, getFolders } from './library-store.js';
 import { $, state, hooks, clearSel, pushUndo, save, renderAll } from './state.js';
 
-export const errText = e => e && e.code === 'quota_exceeded' ? '範本空間已滿，請先刪除一些不用的範本。' : '沒有存成功，請稍後再試一次。';
+export const errText = e => e && e.code === 'quota_exceeded' ? '範本空間已滿，請先刪除一些不用的範本。'
+  : e && e.code === 'offline' ? '目前連不到雲端，請檢查網路後再試一次。'
+  : '沒有存成功，請稍後再試一次。';
 
 let builtinDocs = null;
 export const getBuiltinDocs = () => builtinDocs ||= TEMPLATES.map(docFromTemplate);
