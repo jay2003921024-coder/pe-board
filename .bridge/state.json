@@ -1,11 +1,11 @@
 {
-  "phase": "plan",
+  "phase": "build",
   "awaiting": "human",
-  "message": "檢查點 1：請閱讀 .bridge/SPEC.md，特別是驗收條件與假設。",
+  "message": "檢查點 2：請看 .bridge/PLAN.md（共 11 個任務，審查意見在 .bridge/reviews/）。",
   "spec_hash": "cf6b2da1503eab7380a61aaf40c7dec27333c87e424e9f94cb09bf5cd06bc49d",
   "spec_version": 1,
   "plan_step": "plan",
-  "plan_round": 0,
+  "plan_round": 1,
   "verify_round": 0,
   "verify_fails": 0,
   "pending": [],
@@ -18,6 +18,13 @@
   "history": [
     "2026-10-21 10:29 階段：需求訪談 → ★ 檢查點 1：核准 SPEC",
     "2026-10-21 10:30 SPEC v1 已核准並鎖定",
-    "2026-10-21 10:30 階段：★ 檢查點 1：核准 SPEC → 計畫"
+    "2026-10-21 10:30 階段：★ 檢查點 1：核准 SPEC → 計畫",
+    "2026-10-21 10:47 claude 完成：撰寫計畫與拆任務",
+    "2026-10-21 10:55 claude 完成：撰寫計畫與拆任務",
+    "2026-10-21 11:15 antigravity 完成：挑戰計畫",
+    "2026-10-21 11:20 claude 完成：依審查意見修訂計畫",
+    "2026-10-21 11:20 階段：計畫 → ☆ 檢查點 2：核准 PLAN",
+    "2026-10-21 11:23 PLAN 已核准",
+    "2026-10-21 11:23 階段：☆ 檢查點 2：核准 PLAN → 實作與交叉審查"
   ]
 }

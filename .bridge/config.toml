@@ -20,23 +20,31 @@ cmd = ["claude", "-p", "{prompt}", "--permission-mode", "acceptEdits",
        "--allowedTools", "Read,Edit,Write,Glob,Grep,Bash"]
 
 [agents.gemini]
-cmd = ["gemini", "-p", "{prompt}", "--approval-mode", "auto_edit"]
+# 2026-10-21 停用：Gemini CLI 已不支援個人 Google 帳號登入，改由 Antigravity 接手 critic／reviewer
+# cmd = ["gemini", "-p", "{prompt}", "--approval-mode", "auto_edit"]
+cmd = []
 
 [agents.antigravity]
-# Antigravity 是 IDE，預設由你在 IDE 內執行 workflow（manual）。
-# 如果你有可以 headless 呼叫它的方式，設 manual = false 並填 cmd。
+# Antigravity 的指令列版本 agy，headless 執行。
+# --mode accept-edits：可以讀寫檔案，但 shell 指令一律被拒（沒人能按「允許」）→ 適合規劃挑戰與審查。
+# 若要改成在 IDE 內手動觸發（例如需要瀏覽器驗收），設 manual = true。
+manual = false
+cmd = ["agy", "-p", "{prompt}", "--mode", "accept-edits", "--print-timeout", "30m"]
+
+[agents.antigravity_ide]
+# 同一個 Antigravity，但在 IDE 內由你手動觸發 workflow：需要開瀏覽器、跑指令的瀏覽器驗收用這個。
 manual = true
 cmd = []
 
 [roles]
 planner = "claude"          # 寫 PLAN 與拆任務
-critic = "gemini"           # 挑戰 PLAN
-e2e = "antigravity"         # 驗收：antigravity | gemini | claude | none
+critic = "antigravity"     # 挑戰 PLAN
+e2e = "antigravity_ide"     # 驗收：antigravity_ide（IDE 內手動，可開瀏覽器）| antigravity | claude | none
 fixer = "claude"            # 驗收失敗時，修正任務的預設 owner
 
 # 交叉審查：誰寫的程式由誰審
 [roles.reviewer_for]
-claude = "gemini"
+claude = "antigravity"
 gemini = "claude"
 antigravity = "claude"
 
