@@ -3,16 +3,18 @@ import { FONT, f, esc } from './util.js';
 import { courtSVG } from './courts.js';
 import { LINES, shape, selR } from './items.js';
 
-export function itemSVG(it, k, hit) {
+// padScale 放大隱形的命中範圍（觸控用），不影響外觀；預設 1 與舊版逐字相同。
+export function itemSVG(it, k, hit, padScale = 1) {
   const r = it.rot ? ` rotate(${it.rot})` : '';
-  const pad = hit ? `<circle r="${f(selR(it) * 0.9)}" fill="transparent"/>` : '';
+  const pad = hit ? `<circle r="${f(selR(it) * 0.9 * padScale)}" fill="transparent"/>` : '';
   return `<g ${hit ? `data-id="${it.id}" ` : ''}transform="translate(${f(it.x)} ${f(it.y)})${r} scale(${k})">${pad}${shape(it)}</g>`;
 }
 
 export const qpt = (t, l) => { const u = 1 - t; return [u * u * l.x1 + 2 * u * t * l.cx + t * t * l.x2, u * u * l.y1 + 2 * u * t * l.cy + t * t * l.y2]; };
 export const qder = (t, l) => [2 * (1 - t) * (l.cx - l.x1) + 2 * t * (l.x2 - l.cx), 2 * (1 - t) * (l.cy - l.y1) + 2 * t * (l.y2 - l.cy)];
 
-export function lineSVG(l, hit) {
+// padScale 放大隱形的命中範圍（觸控用），不影響外觀；預設 1 與舊版逐字相同。
+export function lineSVG(l, hit, padScale = 1) {
   const c = l.color || '#141414';
   const id = hit ? `data-id="${l.id}" ` : '';
   if (l.type === 'zone') {
@@ -20,7 +22,7 @@ export function lineSVG(l, hit) {
     const halo = c.toLowerCase() === '#ffffff' ? '#141414' : '#ffffff';
     const lab = l.label ? `<text x="${f(x + 8)}" y="${f(y + 18)}" font-size="15" font-weight="700" fill="${c}" stroke="${halo}" stroke-width="3.5" paint-order="stroke">${esc(l.label)}</text>` : '';
     // Zones are grabbed by their edge or label only, so a box selection can start inside them.
-    const edge = hit ? `<rect x="${f(x)}" y="${f(y)}" width="${f(w)}" height="${f(h)}" rx="6" fill="none" stroke="transparent" stroke-width="16"/>` : '';
+    const edge = hit ? `<rect x="${f(x)}" y="${f(y)}" width="${f(w)}" height="${f(h)}" rx="6" fill="none" stroke="transparent" stroke-width="${f(16 * padScale)}"/>` : '';
     return `<g ${id}><rect x="${f(x)}" y="${f(y)}" width="${f(w)}" height="${f(h)}" rx="6" fill="${c}" fill-opacity="0.16" stroke="${c}" stroke-width="2.5" stroke-dasharray="10 6"${hit ? ' pointer-events="none"' : ''}/>${edge}${lab}</g>`;
   }
   let [dx, dy] = qder(1, l), d = Math.hypot(dx, dy);
@@ -46,17 +48,17 @@ export function lineSVG(l, hit) {
   } else {
     body = `<path d="${curve}" fill="none" stroke="${c}" stroke-width="3" stroke-linecap="round"${l.type === 'pass' ? ' stroke-dasharray="9 7"' : ''}/>`;
   }
-  const hitPath = hit ? `<path d="M${f(l.x1)} ${f(l.y1)}Q${f(l.cx)} ${f(l.cy)} ${f(l.x2)} ${f(l.y2)}" fill="none" stroke="transparent" stroke-width="18"/>` : '';
+  const hitPath = hit ? `<path d="M${f(l.x1)} ${f(l.y1)}Q${f(l.cx)} ${f(l.cy)} ${f(l.x2)} ${f(l.y2)}" fill="none" stroke="transparent" stroke-width="${f(18 * padScale)}"/>` : '';
   return `<g ${id}>${hitPath}${body}${head}</g>`;
 }
 
-export function boardContent(courtId, st, k, hit) {
+export function boardContent(courtId, st, k, hit, padScale = 1) {
   const zones = [], lines = [], items = [], texts = [];
   for (const o of st.items) {
-    if (o.type === 'zone') zones.push(lineSVG(o, hit));
-    else if (LINES[o.type]) lines.push(lineSVG(o, hit));
-    else if (o.type === 'text') texts.push(itemSVG(o, k, hit));
-    else items.push(itemSVG(o, k, hit));
+    if (o.type === 'zone') zones.push(lineSVG(o, hit, padScale));
+    else if (LINES[o.type]) lines.push(lineSVG(o, hit, padScale));
+    else if (o.type === 'text') texts.push(itemSVG(o, k, hit, padScale));
+    else items.push(itemSVG(o, k, hit, padScale));
   }
   return `<g font-family='${FONT}'>${courtSVG(courtId)}${zones.join('')}${lines.join('')}${items.join('')}${texts.join('')}</g>`;
 }

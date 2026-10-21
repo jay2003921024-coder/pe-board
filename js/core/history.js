@@ -9,8 +9,8 @@ export function createHistory({ limit = 80 } = {}) {
     redo(currentJson) { if (!redoStack.length) return null; undoStack.push(currentJson); return redoStack.pop(); },
     canUndo: () => undoStack.length > 0,
     canRedo: () => redoStack.length > 0,
-    // 取消剛剛 push 的那一筆（拖曳畫出的線太短被丟掉時）。
-    popLast() { undoStack.pop(); },
+    // 取消剛剛 push 的那一筆，並回傳它（拖曳畫出的線太短被丟掉、或雙指縮放中途取消單指拖曳時）。
+    popLast() { return undoStack.pop(); },
     clear() { undoStack = []; redoStack = []; },
   };
 }

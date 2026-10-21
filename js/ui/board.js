@@ -3,10 +3,18 @@ import { W, f } from '../core/util.js';
 import { courtH } from '../core/courts.js';
 import { isLine, selR, textHalfW } from '../core/items.js';
 import { qpt, boardContent } from '../core/render.js';
+import { defaultView } from '../core/viewport.js';
 import { $, state, hooks, step, getSel, selIds, selObjs } from './state.js';
 
 let board;
-export function handleR() { const w = board.getBoundingClientRect().width || W; return Math.max(8, 8 * W / w * 0.75); }
+// 觸控時命中範圍與把手放大（原尺寸基準為 1000 viewBox 寬 ÷ 畫面實際寬度）；把手最小 22 viewBox 單位，常見畫面寬度下約等於 44 CSS px。
+export const TOUCH_PAD = 1.6;
+export function handleR() {
+  const viewW = (state.view || defaultView({ w: W, h: courtH(state.doc.court) })).w;
+  const w = board.getBoundingClientRect().width || viewW;
+  const r = Math.max(8, 8 * viewW / w * 0.75);
+  return state.ui.touch ? Math.max(r, 22) : r;
+}
 
 export function ring(o, k) {
   if (o.type === 'zone') {
@@ -48,8 +56,10 @@ export function overlay() {
 
 export function renderBoard() {
   const { doc, ui } = state;
-  board.setAttribute('viewBox', `0 0 ${W} ${f(courtH(doc.court))}`);
-  board.innerHTML = boardContent(doc.court, step(), doc.iconScale, true) + overlay();
+  const bounds = { w: W, h: courtH(doc.court) };
+  const view = state.view || defaultView(bounds);
+  board.setAttribute('viewBox', `${f(view.x)} ${f(view.y)} ${f(view.w)} ${f(view.h)}`);
+  board.innerHTML = boardContent(doc.court, step(), doc.iconScale, true, ui.touch ? TOUCH_PAD : 1) + overlay();
   board.classList.toggle('placing', ui.tool !== 'select');
 }
 

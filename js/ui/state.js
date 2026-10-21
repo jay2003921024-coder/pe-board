@@ -7,9 +7,12 @@ export const $ = s => document.querySelector(s);
 
 export const state = {
   doc: null,
-  ui: { tool: 'select', team: 'red', ink: '#141414', sel: null, sels: [] },
+  // touch：這次操作是不是用手指（放大命中範圍與把手）；multi：平板的多選模式（取代 Shift+點）。
+  ui: { tool: 'select', team: 'red', ink: '#141414', sel: null, sels: [], touch: false, multi: false },
   drag: null,
   anim: null,
+  // 005：目前畫布的縮放／平移（viewBox），null＝原尺寸（見 core/viewport.js）。
+  view: null,
 };
 export const history = createHistory({ limit: 80 });
 
@@ -36,6 +39,7 @@ export const selectOne = id => setSelection([id]);
 export function clearSel() { state.ui.sel = null; state.ui.sels = []; }
 
 export function save() { saveDoc(state.doc); }
+export function resetView() { state.view = null; hooks.renderBoard(); }
 export function updateHistory() { $('#btnUndo').disabled = !history.canUndo(); $('#btnRedo').disabled = !history.canRedo(); }
 export function pushUndo() { history.push(JSON.stringify(state.doc)); updateHistory(); }
 export function restore(json) {

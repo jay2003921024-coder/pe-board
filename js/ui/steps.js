@@ -51,6 +51,7 @@ export function initSteps() {
   $('#court').addEventListener('change', e => mutate(() => {
     const d = doc();
     d.court = e.target.value; const H = courtH(d.court);
+    state.view = null; // 換場地後比例不同，取消目前的縮放／平移
     for (const s of d.steps) for (const o of s.items) {
       if (isLine(o)) { o.y1 = Math.min(o.y1, H); o.y2 = Math.min(o.y2, H); o.cy = Math.min(o.cy, H); }
       else o.y = Math.min(o.y, H - 10);

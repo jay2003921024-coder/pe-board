@@ -1,0 +1,7 @@
+/* 平板觸控：操作列、防誤觸（長按選單、雙指/雙擊頁面縮放只在畫布範圍關閉）。桌機也會看到操作列。 */
+.touch-bar{display:flex;flex-wrap:wrap;gap:6px}
+.touch-bar button{min-width:44px;min-height:44px}
+.touch-bar #btnTouchMulti[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+
+.canvas-wrap{touch-action:none}
+#board{-webkit-touch-callout:none}

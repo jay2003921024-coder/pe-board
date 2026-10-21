@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="css/base.css">
 <link rel="stylesheet" href="css/layout.css">
 <link rel="stylesheet" href="css/modals.css">
+<link rel="stylesheet" href="css/touch.css">
 <script type="module" src="js/main.js"></script>
 </head>
 <body>
@@ -43,6 +44,7 @@
           <button class="icon-btn" id="btnUndo" type="button" title="復原 (Ctrl+Z)" aria-label="復原"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 5 3 9l4 4"/><path d="M3 9h9a5 5 0 0 1 0 10h-2"/></svg></button>
           <button class="icon-btn" id="btnRedo" type="button" title="重做 (Ctrl+Shift+Z)" aria-label="重做"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m13 5 4 4-4 4"/><path d="M17 9H8a5 5 0 0 0 0 10h2"/></svg></button>
         </div>
+        <div class="touch-bar" id="touchBar" role="group" aria-label="觸控操作"></div>
       </div>
       <div class="canvas-wrap"><svg id="board" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 600" role="img" aria-label="教案圖畫布"></svg></div>
       <div class="hint" id="hint"></div>

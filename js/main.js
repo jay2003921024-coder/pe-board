@@ -12,11 +12,12 @@ import { initPlayer } from './ui/player.js';
 import { initExporter } from './ui/exporter.js';
 import { initLibrary } from './ui/library.js';
 import { initSaveTpl } from './ui/savetpl.js';
+import { initTouch } from './ui/touch.js';
 
 initState(loadDoc() || docFromTemplate(TEMPLATES[0]));
 
-// 後續任務在此加入自己的 init（005：touch；008：auth／sharearea）。
-const inits = [initBoard, initToolbar, initSteps, initEditor, initProps, initKeyboard, initPlayer, initExporter, initLibrary, initSaveTpl];
+// 後續任務在此加入自己的 init（008：auth／sharearea）。
+const inits = [initBoard, initToolbar, initSteps, initEditor, initProps, initKeyboard, initPlayer, initExporter, initLibrary, initSaveTpl, initTouch];
 for (const init of inits) init();
 
 hooks.syncInputs(); hooks.renderTools(); renderAll();
