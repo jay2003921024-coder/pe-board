@@ -1,8 +1,8 @@
 # Bridge 設定檔
 
 [project]
-name = ""
-type = ""            # web | script | app（/elicit 會填）
+name = "體育教案圖板"
+type = "web"         # web | script | app（/elicit 會填）
 
 [checkpoints]
 # 檢查點 1（SPEC）與檢查點 3（demo）一定會停；計畫審核可以關掉
