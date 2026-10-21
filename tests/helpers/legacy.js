@@ -24,7 +24,7 @@ function parse() {
     const name = m[1].replace(/\s*\(.*\)$/, '');
     sections[name] = body.slice(m.index, i + 1 < marks.length ? marks[i + 1].index : body.length);
   });
-  parsed = { preamble: body.slice(0, marks[0].index), sections };
+  parsed = { body, preamble: body.slice(0, marks[0].index), sections };
   return parsed;
 }
 
@@ -42,28 +42,49 @@ export function seededRandom(seed = 1) {
   };
 }
 
+// 從整份舊版程式碼切出單一頂層宣告：`function 名稱(` 到下一個行首的 `}`，或單行的 `const 名稱 = …`。
+// 給所在段落有大量 DOM 副作用、無法整段執行的純函式（例如 Template library 段的 normalizeDoc）。
+function snippet(body, name) {
+  let m = new RegExp(`^(?:async )?function ${name}\\(`, 'm').exec(body);
+  if (m) { const end = body.indexOf('\n}\n', m.index); if (end > 0) return body.slice(m.index, end + 3); }
+  m = new RegExp(`^const ${name} = `, 'm').exec(body);
+  if (m) return body.slice(m.index, body.indexOf('\n', m.index) + 1);
+  throw new Error(`legacy.js：舊版程式碼中找不到頂層宣告「${name}」`);
+}
+
+// 暫時把這個 realm 的 Math.random 換成同一個固定種子亂數，讓新模組的 uid() 與舊版產生相同的序列。
+export function withSeed(seed, fn) {
+  const r = Math.random;
+  Math.random = seededRandom(seed);
+  try { return fn(); } finally { Math.random = r; }
+}
+
 /**
  * 執行前導段與指定段落，回傳一個物件：讀取屬性即取得舊版閉包中的同名常數或函式。
  * @param {string[]} names 段落名稱，例如 ['Courts', 'Objects']（括號說明不用寫）
  * @param {object} [opts]
  * @param {object} [opts.globals] 注入 vm 全域的最小假環境，例如 { ui: { team }, doc: { court } }
  * @param {number} [opts.seed] 給 Math.random 的固定種子
+ * @param {string[]} [opts.snippets] 另外載入的單一頂層宣告名稱（見 snippet）
+ * 對回傳物件設定屬性（例如 `L.doc = d`）會改 vm 全域，供讀全域 `doc` 的舊版函式使用。
  */
-export function loadLegacy(names, { globals = {}, seed = 1 } = {}) {
-  const { preamble, sections } = parse();
+export function loadLegacy(names, { globals = {}, seed = 1, snippets = [] } = {}) {
+  const { body, preamble, sections } = parse();
   const code = names.map(n => {
     if (!(n in sections)) throw new Error(`legacy.js：找不到段落「${n}」，現有段落：${Object.keys(sections).join('、')}`);
     return sections[n];
-  });
+  }).concat(snippets.map(n => snippet(body, n)));
   const math = Object.create(Math);
   math.random = seededRandom(seed);
-  // 前導段的 `$` 只在呼叫時才碰 document；Rendering 段開頭的 $('#board') 需要一個能回傳東西的 querySelector。
-  const context = vm.createContext({ document: { querySelector: () => ({}) }, ...globals, Math: math });
+  // 前導段的 `$` 只在呼叫時才碰 document；Rendering 段開頭的 $('#board')、Step animation／Export 段的
+  // $('#…').addEventListener 需要一個能回傳東西的 querySelector。
+  const context = vm.createContext({ document: { querySelector: () => ({ addEventListener() {} }) }, ...globals, Math: math });
   const get = vm.runInContext(`(function () {\n${preamble}\n${code.join('\n')}\nreturn name => eval(name);\n})()`, context, { filename: 'legacy/pe-board.html' });
   return new Proxy({}, {
     get: (_, key) => {
       if (typeof key !== 'string') return undefined;
       try { return get(key); } catch (e) { throw new Error(`legacy.js：舊版段落 ${names.join('、')} 中沒有「${key}」（${e.message}）`); }
     },
+    set: (_, key, value) => { context[key] = value; return true; },
   });
 }
