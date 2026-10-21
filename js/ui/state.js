@@ -17,6 +17,8 @@ const noop = () => {};
 export const hooks = {
   renderBoard: noop, renderSteps: noop, renderProps: noop, renderHint: noop, renderTools: noop,
   syncInputs: noop, stopAnim: noop,
+  // 011 新增：keyboard.js 透過這三個掛勾呼叫 toolbar.js／props.js，不直接互相 import。
+  setTool: noop, deleteSel: noop, dupSel: noop,
 };
 
 export const step = () => state.doc.steps[state.doc.cur];

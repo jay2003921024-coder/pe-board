@@ -365,15 +365,17 @@ class Bridge:
             pending = self.state.get("pending", [])
             # 正在等 IDE 內 agent 的任務排到最後，先讓 headless agent 做別的
             ready.sort(key=lambda t: any(p.startswith(f"task-{t['id']}-") for p in pending))
-            waiting = None
+            waiting, human = None, None
             for t in ready:
                 try:
                     return self.implement(t)
                 except Halt as h:
+                    # 需要你本人處理的任務不擋住其他已就緒的任務；全部都在等時才停下來
                     if h.who == "human":
-                        raise
-                    waiting = h
-            raise waiting
+                        human = human or h
+                    else:
+                        waiting = waiting or h
+            raise human or waiting
         if len(done) == len(ts):
             self.set_phase("verify")
             return

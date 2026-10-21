@@ -41,6 +41,7 @@ export function setTool(t) { hooks.stopAnim(); state.ui.tool = t; renderTools();
 export function initToolbar() {
   hooks.renderTools = renderTools;
   hooks.renderHint = renderHint;
+  hooks.setTool = setTool;
   $('#tools').addEventListener('click', e => {
     const ui = state.ui, b = e.target.closest('button'); if (!b) return;
     if (b.dataset.tool) setTool(b.dataset.tool);
