@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>體育教案圖板</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/layout.css">
+<link rel="stylesheet" href="css/modals.css">
+<script type="module" src="js/main.js"></script>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect x="1.5" y="4.5" width="25" height="19" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><line x1="14" y1="4.5" x2="14" y2="23.5" stroke="currentColor" stroke-width="2"/><circle cx="14" cy="14" r="3.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="7" cy="10" r="2.2" fill="#d6453d"/><circle cx="21" cy="18" r="2.2" fill="#2f6fd0"/></svg>
+      體育教案圖板
+    </div>
+    <input id="lessonTitle" class="title-in" type="text" aria-label="單元名稱" placeholder="輸入單元名稱">
+    <select id="grade" aria-label="適用年段">
+      <option>國小低年級</option><option>國小中年級</option><option>國小高年級</option><option>國中</option><option>高中</option>
+    </select>
+    <button class="btn" id="btnTemplates" type="button">範本庫</button>
+    <button class="btn" id="btnSaveTpl" type="button">存成範本</button>
+    <button class="btn primary" id="btnExport" type="button">匯出圖片</button>
+  </header>
+
+  <div class="work">
+    <aside class="tools" id="tools" aria-label="工具"></aside>
+
+    <main class="stage">
+      <div class="stage-bar">
+        <select id="court" aria-label="場地"></select>
+        <div class="steps" id="steps" role="tablist" aria-label="步驟"></div>
+        <div class="play">
+          <button class="btn small" id="btnPlay" type="button" title="從目前步驟開始，依序播放人和球的移動">▶ 播放動畫</button>
+          <select id="speed" aria-label="播放速度"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option></select>
+        </div>
+        <div class="history">
+          <button class="icon-btn" id="btnUndo" type="button" title="復原 (Ctrl+Z)" aria-label="復原"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 5 3 9l4 4"/><path d="M3 9h9a5 5 0 0 1 0 10h-2"/></svg></button>
+          <button class="icon-btn" id="btnRedo" type="button" title="重做 (Ctrl+Shift+Z)" aria-label="重做"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m13 5 4 4-4 4"/><path d="M17 9H8a5 5 0 0 0 0 10h2"/></svg></button>
+        </div>
+      </div>
+      <div class="canvas-wrap"><svg id="board" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 600" role="img" aria-label="教案圖畫布"></svg></div>
+      <div class="hint" id="hint"></div>
+    </main>
+
+    <aside class="panel">
+      <section class="card">
+        <h2>選取的物件</h2>
+        <div id="props"></div>
+      </section>
+      <section class="card">
+        <h2>本步驟 <small id="stepCount"></small></h2>
+        <div class="field"><label for="stepName">步驟名稱</label><input id="stepName" type="text" placeholder="例：傳球後切入"></div>
+        <div class="field"><label for="stepNote">活動說明</label><textarea id="stepNote" placeholder="寫下這一步的動作要領、口令或安全提醒，會一起出現在匯出的圖片上。"></textarea></div>
+        <div class="row">
+          <button class="btn small" id="btnClearStep" type="button">清空畫面</button>
+          <button class="btn small danger" id="btnDelStep" type="button">刪除此步驟</button>
+        </div>
+      </section>
+      <section class="card">
+        <h2>教案資訊</h2>
+        <div class="field"><label for="infoPlayers">人數與分組</label><input id="infoPlayers" type="text" placeholder="例：每組 3 人，共 8 組"></div>
+        <div class="field"><label for="infoEquip">器材</label><input id="infoEquip" type="text" placeholder="例：籃球 8 顆、三角錐 16 個"></div>
+        <div class="field"><label for="infoTime">時間</label><input id="infoTime" type="text" placeholder="例：15 分鐘"></div>
+        <div class="field"><label for="iconScale">圖示大小 <span id="iconScaleVal"></span></label><input id="iconScale" type="range" min="0.6" max="1.8" step="0.1"></div>
+      </section>
+    </aside>
+  </div>
+</div>
+
+<div class="modal" id="exportModal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="expTitle">
+    <div class="modal-head">
+      <h2 id="expTitle">匯出教案圖</h2>
+      <button class="btn small" type="button" data-close>關閉</button>
+    </div>
+    <div class="row">
+      <div class="seg" role="group" aria-label="匯出範圍">
+        <button type="button" id="expCur" aria-pressed="true">目前步驟</button>
+        <button type="button" id="expAll" aria-pressed="false">全部步驟＋說明</button>
+      </div>
+      <button class="btn primary small" id="btnCopyImg" type="button">複製圖片</button>
+    </div>
+    <p class="exp-msg" id="expMsg">在圖片上按右鍵（手機長按）可以「另存圖片」，或按「複製圖片」直接貼進 Word、Google 文件或簡報。</p>
+    <img class="exp-img" id="expImg" alt="匯出的教案圖預覽">
+  </div>
+</div>
+
+<div class="modal" id="tplModal" hidden>
+  <div class="modal-card wide" role="dialog" aria-modal="true" aria-labelledby="tplTitle">
+    <div class="modal-head">
+      <h2 id="tplTitle">範本庫</h2>
+      <button class="btn small" type="button" data-close>關閉</button>
+    </div>
+    <div class="lib">
+      <nav class="lib-nav" id="libNav" aria-label="範本分類"></nav>
+      <div class="lib-main">
+        <div class="lib-tools" id="libTools"></div>
+        <p class="exp-msg" id="libMsg"></p>
+        <div class="tpl-grid" id="tplGrid"></div>
+      </div>
+    </div>
+    <input type="file" id="importFile" accept=".json,application/json" hidden>
+  </div>
+</div>
+
+<div class="modal" id="saveModal" hidden>
+  <form class="modal-card narrow" role="dialog" aria-modal="true" aria-labelledby="saveTitle">
+    <div class="modal-head">
+      <h2 id="saveTitle">存成範本</h2>
+      <button class="btn small" type="button" data-close>取消</button>
+    </div>
+    <div class="field" id="saveModeField" hidden>
+      <label>儲存方式</label>
+      <div class="seg"><button type="button" data-mode="update">更新「<span id="saveModeName"></span>」</button><button type="button" data-mode="new">另存成新範本</button></div>
+    </div>
+    <div class="field"><label for="saveName">範本名稱</label><input id="saveName" type="text" maxlength="40" placeholder="例：三人傳切上籃"></div>
+    <div class="field"><label for="saveFolder">放進資料夾</label><select id="saveFolder"></select></div>
+    <div class="field" id="newFolderField" hidden><label for="saveNewFolder">新資料夾名稱</label><input id="saveNewFolder" type="text" maxlength="40" placeholder="例：七年級 籃球單元"></div>
+    <p class="exp-msg" id="saveMsg"></p>
+    <div class="row"><button class="btn primary" id="btnDoSave" type="submit">儲存</button></div>
+  </form>
+</div>
+
+<div class="toast" id="toast" role="status" hidden></div>
+</body>
+</html>

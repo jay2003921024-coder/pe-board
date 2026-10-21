@@ -28,3 +28,5 @@
 - 2026-10-21｜claude 任務的 reviewer 改回 claude（config.toml reviewer_for 與各任務檔 reviewer 欄位）｜agy 無頭模式只要有一個指令未放行（例如臨時 node -e 檢查）就整份審查無輸出，無法穩定產生 review 檔；--sandbox 無效｜使用者（Jay）決定，claude 修改
 - 2026-10-21｜`tests/helpers/legacy.js` 擴充：`snippets` 選項切出單一頂層宣告（給所在段落有 DOM 副作用的純函式，如 `normalizeDoc`）；Proxy 可設定屬性（`L.doc = d` 注入舊版讀的全域 doc）；`withSeed` 讓本 realm 的 `uid()` 與 vm 用同種子序列，範本與正規化結果連 id 逐字比對｜不需為 exportSVG／planTransition／normalizeDoc 做靜態 fixture｜claude
 - 2026-10-21｜core API：`createHistory().undo/redo(currentJson)` 回傳要還原的 JSON（無則 null）；`parseSavedDoc` 合法時原樣回傳（同舊版，不正規化）；`parseTemplateFile` 回傳的 doc 已正規化，格式錯誤 throw、找不到範本回 `[]`｜history 不持有 doc，狀態仍只在 `ui/state.js`；匯入的 UI 只需分辨「讀不懂」與「找不到範本」兩種訊息｜claude
+- 2026-10-21｜`js/ui/state.js` 以 `state` 物件持有可變狀態（`state.doc` 可被 restore 整個換掉），跨 UI 模組的呼叫走 `hooks`（renderBoard／renderSteps／renderProps／renderHint／renderTools／syncInputs／stopAnim，預設 no-op，由各模組 init 填入）；`main.js` 以 `inits` 陣列依序初始化｜UI 模組不互相 import、避免循環依賴；後續任務只需新增 hook 欄位與 init，不改既有模組｜claude
+- 2026-10-21｜`index.html` 加上 `<!doctype html>` 與 `lang="zh-Hant"`（舊版沒有，直接開檔是 quirks mode）｜舊版設計時以 Claude 頁面外殼（標準模式）為準；headless 截圖比對版面一致｜claude

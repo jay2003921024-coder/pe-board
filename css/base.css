@@ -1,0 +1,28 @@
+/* 基本：配色變數（含深色模式）、reset。搬自舊版，內容不變。 */
+:root{
+  --bg:#edf1f0; --surface:#ffffff; --surface-2:#f5f8f7; --ink:#16232a; --muted:#5a6a70;
+  --line:#d3dcda; --accent:#1f5fbf; --accent-ink:#ffffff; --accent-soft:#e3ecfa;
+  --mark:#f2c230; --stage:#dde4e2; --danger:#c2362e;
+  --display:"LXGW WenKai TC","Kaiti TC","STKaiti",serif;
+  --body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#10171a; --surface:#172126; --surface-2:#1c282e; --ink:#e4ebe9; --muted:#93a4a8;
+  --line:#2a3a40; --accent:#77a3f2; --accent-ink:#0c1422; --accent-soft:#1d2d47;
+  --mark:#f2c230; --stage:#0b1113; --danger:#f0756c; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#10171a; --surface:#172126; --surface-2:#1c282e; --ink:#e4ebe9; --muted:#93a4a8;
+  --line:#2a3a40; --accent:#77a3f2; --accent-ink:#0c1422; --accent-soft:#1d2d47;
+  --mark:#f2c230; --stage:#0b1113; --danger:#f0756c; color-scheme:dark;
+}
+/* Same basics the Claude page wrapper adds, so the file also works when opened directly in a browser */
+[hidden]{display:none!important}
+html,body{margin:0}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:14px;line-height:1.5}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
