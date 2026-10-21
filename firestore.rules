@@ -1,0 +1,73 @@
+rules_version = '2';
+
+// 體育教案圖板的 Firestore 安全規則。
+// shared/{id}：公開讀；登入者可發布自己的；作者可改刪；管理員可刪（下架）。
+// users/{uid}、users/{uid}/templates/{id}：只限本人。其他路徑一律拒絕。
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 名單格式固定：一行一個單引號 email；必須與 js/config/firebase-config.js 的 ADMIN_EMAILS 相同（tests/unit/config.test.js 檢查）。
+    // ADMIN_EMAILS:BEGIN
+    function adminEmails() { return [
+      'admin@example.com',
+    ]; }
+    // ADMIN_EMAILS:END
+
+    function signedIn() { return request.auth != null; }
+    function isUser(uid) { return signedIn() && request.auth.uid == uid; }
+    function isAdmin() {
+      return signedIn()
+        && request.auth.token.get('email_verified', false) == true
+        && request.auth.token.get('email', '') in adminEmails();
+    }
+
+    // 共用欄位檢查；DOC_JSON_MAX 與 js/core/share.js 相同。
+    function validContent(d) {
+      return d.name is string && d.name.size() > 0 && d.name.size() <= 40
+        && d.court is string && d.court.size() > 0 && d.court.size() <= 40
+        && d.grade is string && d.grade.size() <= 40
+        && d.steps is int && d.steps >= 1 && d.steps <= 500
+        && d.docJson is string && d.docJson.size() <= 300000;
+    }
+
+    function validShared(d) {
+      return d.keys().hasOnly(['name', 'court', 'grade', 'steps', 'docJson', 'authorUid', 'authorName', 'createdAt', 'updatedAt'])
+        && d.keys().hasAll(['name', 'court', 'grade', 'steps', 'docJson', 'authorUid', 'authorName', 'createdAt', 'updatedAt'])
+        && validContent(d)
+        && d.authorName is string && d.authorName.size() > 0 && d.authorName.size() <= 100
+        && d.updatedAt == request.time;
+    }
+
+    match /shared/{id} {
+      allow read: if true;
+      allow create: if signedIn()
+        && validShared(request.resource.data)
+        && request.resource.data.authorUid == request.auth.uid
+        && request.resource.data.createdAt == request.time;
+      allow update: if signedIn()
+        && resource.data.authorUid == request.auth.uid
+        && validShared(request.resource.data)
+        && request.resource.data.authorUid == resource.data.authorUid
+        && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if signedIn() && (resource.data.authorUid == request.auth.uid || isAdmin());
+    }
+
+    match /users/{uid} {
+      allow read, delete: if isUser(uid);
+      allow create, update: if isUser(uid)
+        && request.resource.data.keys().hasOnly(['folders'])
+        && request.resource.data.folders is list
+        && request.resource.data.folders.size() <= 500;
+
+      match /templates/{tplId} {
+        allow read, delete: if isUser(uid);
+        allow create, update: if isUser(uid)
+          && request.resource.data.keys().hasOnly(['name', 'court', 'grade', 'steps', 'folder', 'updatedAt', 'docJson'])
+          && request.resource.data.keys().hasAll(['name', 'court', 'grade', 'steps', 'folder', 'updatedAt', 'docJson'])
+          && validContent(request.resource.data)
+          && request.resource.data.folder is string && request.resource.data.folder.size() <= 40
+          && request.resource.data.updatedAt is number;
+      }
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "shared",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "court", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

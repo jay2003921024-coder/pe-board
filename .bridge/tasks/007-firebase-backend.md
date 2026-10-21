@@ -2,7 +2,7 @@
 id: 007
 title: Firebase 後端：規則與規則測試、雲端存取層、共享純邏輯
 owner: claude
-status: todo
+status: done
 depends_on: [002]
 reviewer: claude
 attempts: 0
@@ -57,3 +57,26 @@ attempts: 0
 ## 交接筆記
 
 <!-- 實作者完成後填寫：做了什麼、怎麼驗證、已知限制 -->
+
+### 做了什麼
+- `firestore.rules`：`shared` 公開讀；create 需登入＋`authorUid == auth.uid`＋欄位白名單（hasOnly/hasAll）＋型別/長度（name 1–40、docJson ≤ 300000 字元、steps 為 int）＋`createdAt/updatedAt == request.time`；update 限作者且不可改 `authorUid/createdAt`；delete 為作者或 `isAdmin()`（email 在名單且 `email_verified`）。`users/{uid}` 與 `templates/{id}` 只限本人並檢查欄位。其他路徑無規則＝全拒。名單依固定格式放在 `ADMIN_EMAILS:BEGIN/END` 之間（佔位 `admin@example.com`）。
+- `firestore.indexes.json`（`shared`：court ASC + createdAt DESC）、`firebase.json`（rules/indexes、emulator：firestore 8080、auth 9099）。
+- `js/config/firebase-config.js`：`FIREBASE_CONFIG`（佔位）、`ADMIN_EMAILS`、`isConfigured()`、`EMULATOR_CONFIG`。
+- `js/store/firebase.js`：`SDK_VERSION = '12.19.0'`（唯一出現處）、`initFirebase()`（冪等、永不 reject；未設定不載入；8 秒逾時；一律 `getRedirectResult` → `onAuthStateChanged`）、`getFirebase()`（`{app, auth, db, au, fs}` 或 null；失敗後下次重試）、`getStatus()/onStatus()`（idle/loading/ready/offline/unconfigured）、`onUser()`（`{uid,name,email,isAdmin}`，isAdmin 需 emailVerified）、`currentUser()`、`onResume()`（晚註冊也拿得到、只交一次）、`signIn(resumeIntent)`（SDK 已載入時同步開 popup；`popup-blocked`/`operation-not-supported…` 時寫 `sessionStorage['pe-board-resume']` 再 redirect；回 `{ok,user}|{cancelled}|{redirect}|{offline}|{error}`）、`signOut()`；localhost 加 `?emulator` 改連 emulator。
+- `js/store/cloud.js`：`createCloud(getFb)` 工廠＋預設匯出 `listShared/publish/updateShared/deleteShared/listMine/saveMine/deleteMine/saveFolders`。全部不拋錯，回 `{ok:true,…}`／`{offline:true}`／`{error:code}`（例如 `permission-denied`、`too-large`）；每次操作 15 秒逾時→offline。`listShared({court, after, limit=50})` 回 `{items, cursor, more}`。`saveFolders` 在 transaction 內 `planFolderMerge` 後才寫。
+- `js/core/share.js`（純）：`toSharedRecord`、`sharedContent`、`fromSharedRecord`（壞 docJson→null，經 normalizeDoc；場地/年段/步數以 docJson 為準）、`toMineRecord/fromMineRecord`、`filterShared`、`planFirstUpload`（以 id 去重；不合法 id 給新 id）、`planFolderMerge(local, cloud, removed=[])`、`isAdmin`、`toCloudFailure`、常數 `DOC_JSON_MAX/PAGE_SIZE`。
+- `package.json`：devDependencies 固定版本、`test:rules`；`.gitignore` 加 `*-debug.log`（emulator 產生的 log）；README「規則測試」段落；DECISIONS 追加 5 條。
+
+### 怎麼驗證
+- `npm test`：119 pass / 0 fail（新增 `share.test.js`、`config.test.js`、`firebase.test.js`；結構測試確認新檔 ≤ 400 行、core 無瀏覽器全域）。
+  - `config.test.js`：rules 名單與 `ADMIN_EMAILS` 一致（找不到標記時清楚失敗）、rules 的 docJson 上限與 `DOC_JSON_MAX` 一致、索引檔、`firebase.json`、`isConfigured`、SDK 版本只有一個常數。
+  - `firebase.test.js`（AC-27）：未設定→不載入、存取層與 signIn 回 `{offline:true}`；CDN 失敗、逾時→status offline 不拋錯且會重試；Firestore 操作逾時/拋錯轉結果物件；假 SDK 驗證 redirect 復原（resumeIntent 存取、只交一次、無轉址結果時清除）、管理員需 email_verified。
+- `npm run test:rules`（Java 21、`npm install` 後）：9 pass / 0 fail。規則：AC-25 未登入對 shared/users/templates/其他路徑寫入全拒、可讀 shared；偽造 authorUid、docJson 300001 字元（300000 可過）、多餘欄位、自訂 createdAt、name 41 字、steps 非整數被拒；AC-23 他人改刪被拒、作者改 authorUid/createdAt 被拒、作者可改刪；AC-24 管理員可刪不可改、email 未驗證不算；users 只限本人。另以真正的 `cloud.js` 對 emulator：AC-22 發布後未登入讀回含作者名稱與伺服器時間、AC-23/24/25 存取層回 `permission-denied`、AC-29 依場地篩選＋cursor 分頁新到舊不重複、AC-28 首次上傳計畫＋saveMine/listMine/deleteMine＋資料夾合併不覆蓋與改名。
+
+### 已知限制／給 008、009、010
+- 與任務提示的差異：`test:rules` 多了 `--project demo-pe-board`（沒有 `.firebaserc` 時必要），路徑用 `tests/rules/*.test.js`（`node --test` 不吃目錄）；rules-unit-testing 用 5.0.2（6.x 需要 firebase 13）。
+- `planFolderMerge`/`saveFolders` 多了 `removed` 參數：008 刪除資料夾傳 `[name]`、改名傳 `[from]`，否則聯集會把舊名補回來。
+- `signIn` 要在 click handler 中呼叫且 SDK 已載入（`getStatus()==='ready'`）才會同步開 popup；SDK 未載入時會先 await 載入，Safari 可能擋 popup → 自動走 redirect。redirect 前 008 自己先 `save()` 教案。
+- 離線時 Firestore 寫入可能已排入佇列，逾時回 `{offline:true}` 後仍可能稍後送出（publish 重試可能產生重複，UI 可提示使用者重新整理確認）。
+- 前端 `isAdmin` 與規則一樣是大小寫敏感的完全比對，009 填名單時請用小寫 email。
+- emulator 不檢查索引；010 部署後須在正式網址實測依場地篩選。`firebase-tools` 安裝時 `re2` 的 install script 被 npm allow-scripts 略過，不影響 emulator 執行。

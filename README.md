@@ -27,6 +27,23 @@ npm test
 - `tests/unit/structure.test.js`：`js/`、`css/` 每檔不超過 400 行；`js/core/` 不得使用 `document`、`window`、`localStorage`、`navigator`
 - `tests/helpers/legacy.js`：從 `legacy/pe-board.html` 依註解標記（`/* ---------- Courts ---------- */` 等）切出舊版程式碼，在 `node:vm` 中執行，當參考答案
 
+## 規則測試（Firestore 安全規則）
+
+需要 Java 11 以上與 `npm install`（安裝 devDependencies：`firebase-tools`、`@firebase/rules-unit-testing`、`firebase`）：
+
+```sh
+npm install
+npm run test:rules
+```
+
+會啟動本機 Firestore emulator（專案 `demo-pe-board`，不連線到正式環境），執行 `tests/rules/`：
+未登入寫入被拒、非作者改刪被拒、作者可改刪、管理員可刪、`users/{uid}` 只限本人，並以 `js/store/cloud.js` 實際讀寫 emulator。
+
+在 npm script 以外手動使用 Firebase CLI 時一律加 `npx`（例如 `npx firebase emulators:start`）。
+本機開發登入與共享區：`npx firebase emulators:start --project demo-pe-board` 後，開啟 <http://localhost:8000/?emulator>。
+
+注意：emulator 不檢查複合索引（`firestore.indexes.json`），部署後要在正式網址實際測一次「依場地篩選」。
+
 ## 目錄結構
 
 ```
