@@ -4,7 +4,7 @@ title: UI 拆分（二）：匯出 PNG、範本庫（內建／我的）、存成
 owner: claude
 status: todo
 depends_on: [011]
-reviewer: antigravity
+reviewer: claude
 attempts: 0
 ---
 

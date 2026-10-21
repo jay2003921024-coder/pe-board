@@ -4,7 +4,7 @@ title: 教案資料、範本、復原重做、動畫配對、匯出 SVG、範本
 owner: claude
 status: todo
 depends_on: [001]
-reviewer: antigravity
+reviewer: claude
 attempts: 0
 ---
 

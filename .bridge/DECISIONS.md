@@ -23,3 +23,6 @@
 - 2026-10-21｜〔plan-critique-1 §5.1〕新增 `firestore.indexes.json`（`shared`：`court ASC + createdAt DESC`），部署指令改為 `--only firestore:rules,firestore:indexes`｜依場地篩選＋依時間排序需要複合索引，否則正式環境查詢失敗；emulator 不檢查索引，010 須在正式網址實測｜claude（planner）
 - 2026-10-21｜〔plan-critique-1 §3.1、§3.2〕原 003 拆為 003（外殼/渲染/步驟）與 011（互動/屬性/快捷鍵/動畫），依賴 003 → 011 → 004；006 改依賴 005、008｜單一任務範圍過大難以審查與定位回歸；006 須在共享區 UI 完成後才能一併做平板目視調整。新任務用 011 而非重排編號，避免改動其他任務的引用｜claude（planner）
 - 2026-10-21｜〔plan-critique-1 §1.3〕資料夾雲端同步以 `planFolderMerge` 聯集合併後寫入，不直接覆蓋 `users/{uid}.folders`｜避免兩台裝置各自的資料夾互相覆蓋（AC-28）｜claude（planner）
+- 2026-10-21｜`tests/helpers/legacy.js` 的 `loadLegacy(段落名稱[], {globals, seed})` 回傳 Proxy：讀屬性時在舊版閉包內 `eval(名稱)` 取值，不需逐一列出要匯出的名稱（可取到 `TEXT_MAX` 這種同一行多重宣告）；vm 內物件屬於另一個 realm，深比較前先 `structuredClone`｜helper 要被 002 擴充段落，避免每加一段就維護匯出清單｜claude
+- 2026-10-21｜`iconSVG(type, { team = 'red', ballColor } = {})`：舊版讀閉包的 `ui.team`、`COURTS[doc.court].ball`，改由呼叫端傳入｜core 不讀全域狀態｜claude
+- 2026-10-21｜claude 任務的 reviewer 改回 claude（config.toml reviewer_for 與各任務檔 reviewer 欄位）｜agy 無頭模式只要有一個指令未放行（例如臨時 node -e 檢查）就整份審查無輸出，無法穩定產生 review 檔；--sandbox 無效｜使用者（Jay）決定，claude 修改

@@ -4,7 +4,7 @@ title: UI 拆分（一）：外殼、CSS、狀態中心、畫布渲染、工具�
 owner: claude
 status: todo
 depends_on: [002]
-reviewer: antigravity
+reviewer: claude
 attempts: 0
 ---
 

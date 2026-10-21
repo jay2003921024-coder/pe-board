@@ -44,7 +44,7 @@ fixer = "claude"            # 驗收失敗時，修正任務的預設 owner
 
 # 交叉審查：誰寫的程式由誰審
 [roles.reviewer_for]
-claude = "antigravity"
+claude = "claude"
 gemini = "claude"
 antigravity = "claude"
 

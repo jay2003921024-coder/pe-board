@@ -4,7 +4,7 @@ title: Firebase 後端：規則與規則測試、雲端存取層、共享純邏�
 owner: claude
 status: todo
 depends_on: [002]
-reviewer: antigravity
+reviewer: claude
 attempts: 0
 ---
 

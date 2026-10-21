@@ -4,7 +4,7 @@ title: 部署整合、README 完稿、舊網址轉址、回歸清單與實機驗
 owner: claude
 status: todo
 depends_on: [006, 008, 009]
-reviewer: antigravity
+reviewer: claude
 attempts: 0
 ---
 

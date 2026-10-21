@@ -4,7 +4,7 @@ title: UI 拆分（一之二）：畫布互動、屬性面板、快捷鍵、動�
 owner: claude
 status: todo
 depends_on: [003]
-reviewer: antigravity
+reviewer: claude
 attempts: 0
 ---
 

@@ -4,7 +4,7 @@ title: 平板觸控邏輯：操作列、多選、觸控命中、雙指縮放、�
 owner: claude
 status: todo
 depends_on: [004]
-reviewer: antigravity
+reviewer: claude
 attempts: 0
 ---
 

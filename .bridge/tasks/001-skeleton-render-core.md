@@ -2,9 +2,9 @@
 id: 001
 title: 專案骨架、測試環境、場地與物件繪圖核心
 owner: claude
-status: todo
+status: done
 depends_on: []
-reviewer: antigravity
+reviewer: claude
 attempts: 0
 ---
 
@@ -42,3 +42,26 @@ attempts: 0
 ## 交接筆記
 
 <!-- 實作者完成後填寫：做了什麼、怎麼驗證、已知限制 -->
+
+### 做了什麼（claude，2026-10-21）
+
+- `git mv pe-board.html legacy/pe-board.html`（未修改內容）。
+- `package.json`（`type: module`、`engines.node >=22`、`npm test`，無 dependencies）、`.gitignore`。
+- `js/core/util.js`、`courts.js`、`items.js`、`render.js`：由腳本按舊版行號（307–312、315–391、394–518、733–744）**原文搬移**，只加 `export`／`import`；唯一改動是 `iconSVG(type, { team = 'red', ballColor } = {})` 改用參數取代閉包的 `ui.team`、`COURTS[doc.court].ball`。`$`（DOM）沒有搬。`courtSVG` 的快取保留。
+- `tests/helpers/legacy.js`：從 `<script>` 內 `(() => {` 之後開始，以 `/* ---------- 名稱 ---------- */` 標記切段（名稱去掉括號說明，如 `Courts`、`Template library`、`Step animation`），前導段一律先執行；`loadLegacy(names, { globals, seed })` 在 `node:vm` 執行，`Math.random` 換成固定種子（mulberry32），回傳 Proxy（讀屬性＝在閉包內取同名值）。標記或名稱找不到時 throw 清楚訊息。注入的假環境只有 `document.querySelector`（Rendering 段開頭的 `$('#board')`）與測試傳入的 `{ ui:{team}, doc:{court} }`，不需要靜態 fixture。
+- `tests/helpers/strip.js`：`stripCode` 去掉註解、字串、樣板字串文字、正規表示式內容（保留 `${}` 內程式碼與換行）。
+- 測試：`legacy-helper.test.js`（smoke）、`render.golden.test.js`、`structure.test.js`（含反例／正例）。
+- `README.md`：`python3 -m http.server 8000` 啟動方式、`npm test`、目錄結構。
+
+### 怎麼驗證
+
+- `npm test`（Node v26.3.0）：30 個測試全過。
+- golden 涵蓋：14 場地 id／名稱／分組／順序／參數、`courtSVG`／`scaleOf`／`courtH`；TEAMS/INKS/ITEMS/LINES/TEXT_MIN/MAX/clampSize；fixture 含五色＋未知隊伍 × 0–3 字元與數字編號、每種器材 × 多種 rot、球有無顏色、軟墊特殊字元、文字白/黑/大寫 #FFFFFF/預設 × 多種內容與字級、run/pass/dribble × 直線/曲線/近零/零長度/短/長 × 顏色、zone × 顏色 × 有無名稱；逐一比對 `itemSVG`（k=1/1.4/0.6 × hit）、`lineSVG`（hit）、`selR`、`textHalfW`、`qpt`/`qder`，並對 14 場地 × k=1/1.4 × hit 比對 `boardContent`；`iconSVG` 每種類型 × 5 隊 × 14 場地球色。
+- 變異測試：把 `shape` 中學生圓圈的 `stroke-width="2.5"` 改成 2.4，golden 有 7 個測試失敗；還原後全過。
+
+### 已知限制
+
+- 建議把 `.bridge/config.toml` 的 `[tests] command` 設為 `npm test`（依規則我不改 orchestrator 設定）。
+- `stripCode` 是啟發式（以前一個有效字元判斷 `/` 是否開始正規表示式），對 core 這種一般寫法足夠；極端寫法可能誤判，但只會造成「多刪」而非誤報。
+- 頁面尚未存在（003 才建 `index.html`），README 的啟動段落先寫好。
+

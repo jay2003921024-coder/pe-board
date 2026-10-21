@@ -4,7 +4,7 @@ title: 登入列與共享區 UI、我的範本雲端同步
 owner: claude
 status: todo
 depends_on: [004, 007]
-reviewer: antigravity
+reviewer: claude
 attempts: 0
 ---
 
