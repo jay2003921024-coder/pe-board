@@ -4,7 +4,7 @@ import { W, uid } from '../core/util.js';
 import { courtH, COURTS } from '../core/courts.js';
 import { ITEMS, LINES, isLine, clampSize } from '../core/items.js';
 import { qpt } from '../core/render.js';
-import { zoomAt, panBy, defaultView } from '../core/viewport.js';
+import { clampView, defaultView } from '../core/viewport.js';
 import { shiftObj, nextLabel } from '../core/doc.js';
 import { $, state, hooks, step, getSel, findObj, selIds, selObjs, setSelection, selectOne, clearSel, pushUndo, history, save, updateHistory } from './state.js';
 
@@ -18,12 +18,6 @@ function pt(e) {
   const p = board.createSVGPoint(); p.x = e.clientX; p.y = e.clientY;
   const q = p.matrixTransform(board.getScreenCTM().inverse());
   return { x: Math.max(0, Math.min(W, q.x)), y: Math.max(0, Math.min(courtH(state.doc.court), q.y)) };
-}
-
-// 不夾在場地範圍內：雙指縮放的中心點／平移量要用目前（可能已經縮放）的座標，不能被夾掉。
-function ptRaw(clientX, clientY) {
-  const p = board.createSVGPoint(); p.x = clientX; p.y = clientY;
-  return p.matrixTransform(board.getScreenCTM().inverse());
 }
 
 function boxHits(a, b) {
@@ -62,23 +56,33 @@ function startPinch() {
   hooks.renderBoard(); hooks.renderProps();
 }
 
+// 兩指的中心點與距離都只用「目前這一幀」的單一 view／畫布版面快照換算，
+// 不混用不同時間點的 getScreenCTM()，避免縮放時因為跨幀座標系不一致而亂跑。
 function pinchMove() {
   const pts = [...pointers.values()];
   if (pts.length < 2) return;
   const [a, b] = pts;
   const dist = Math.hypot(a.x - b.x, a.y - b.y);
   const centerClient = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
-  const center = ptRaw(centerClient.x, centerClient.y);
   const drag = state.drag;
-  if (drag.lastDist) {
+  const rect = board.getBoundingClientRect();
+  if (drag.lastDist && rect.width && rect.height) {
     const bd = bounds();
-    let view = state.view || defaultView(bd);
-    view = panBy(view, center.x - drag.lastCenter.x, center.y - drag.lastCenter.y, bd);
-    view = zoomAt(view, center, dist / drag.lastDist, bd);
-    state.view = view;
+    const view = state.view || defaultView(bd);
+    // anchor：上一幀兩指中心所對應的場地座標點，這一幀要讓它跟著移到新的兩指中心下面。
+    const anchor = {
+      x: view.x + (drag.lastCenter.x - rect.left) / rect.width * view.w,
+      y: view.y + (drag.lastCenter.y - rect.top) / rect.height * view.h,
+    };
+    const scale = dist / drag.lastDist;
+    const w = view.w / scale;
+    const h = w * bd.h / bd.w;
+    const rx = (centerClient.x - rect.left) / rect.width;
+    const ry = (centerClient.y - rect.top) / rect.height;
+    state.view = clampView({ x: anchor.x - rx * w, y: anchor.y - ry * h, w, h }, bd);
     hooks.renderBoard();
   }
-  drag.lastDist = dist; drag.lastCenter = center;
+  drag.lastDist = dist; drag.lastCenter = centerClient;
 }
 
 function onPointerDown(e) {
@@ -134,6 +138,9 @@ function onPointerDown(e) {
   // 空白處用選取工具：開始框選（Shift 或多選模式保留目前的選取）。
   const base = multi ? selIds() : [];
   if (!multi) clearSel();
+  // 觸控且非多選模式：不框選，放開讓這一指的滑動可以捲動頁面（AC-15 只要求點空白處能取消選取；
+  // 框選是多選模式才需要的手勢，見 005 任務：多選模式下「空白處拖曳＝框選」）。
+  if (state.ui.touch && !multi) { hooks.renderBoard(); hooks.renderProps(); return; }
   state.drag = { kind: 'box', start: p, cur: p, base };
   hooks.renderBoard(); hooks.renderProps();
 }
@@ -187,11 +194,18 @@ function endDrag(e) {
   save();
 }
 
+// CSS 的 touch-action 預設放行捲動（見 css/touch.css），畫圖／拖曳／縮放時才攔下原生捲動；
+// 空白處用單指框選只有多選模式才會啟用，其餘情況 state.drag 為 null，讓手指可以捲動頁面。
+function onTouchMove(e) {
+  if (state.drag) e.preventDefault();
+}
+
 export function initEditor() {
   board = $('#board');
   board.addEventListener('pointerdown', onPointerDown);
   board.addEventListener('pointermove', onPointerMove);
   board.addEventListener('pointerup', endDrag);
   board.addEventListener('pointercancel', endDrag);
+  board.addEventListener('touchmove', onTouchMove, { passive: false });
   board.addEventListener('dblclick', () => { const i = $('#propLabel'); if (i) { i.focus(); i.select(); } });
 }
