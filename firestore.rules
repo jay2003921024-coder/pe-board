@@ -9,7 +9,7 @@ service cloud.firestore {
     // 名單格式固定：一行一個單引號 email；必須與 js/config/firebase-config.js 的 ADMIN_EMAILS 相同（tests/unit/config.test.js 檢查）。
     // ADMIN_EMAILS:BEGIN
     function adminEmails() { return [
-      'admin@example.com',
+      'jay2003921024@gmail.com',
     ]; }
     // ADMIN_EMAILS:END
 

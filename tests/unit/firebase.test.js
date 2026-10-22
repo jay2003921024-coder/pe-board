@@ -30,7 +30,7 @@ afterEach(() => _resetForTest());
 
 test('未設定：不載入 SDK、狀態 unconfigured、存取層回 offline', async () => {
   let loaded = false;
-  _resetForTest({ load: async () => { loaded = true; return []; } });
+  _resetForTest({ config: { apiKey: 'REPLACE_ME' }, load: async () => { loaded = true; return []; } });
   assert.equal(await getFirebase(), null);
   assert.equal(getStatus(), 'unconfigured');
   assert.equal(loaded, false);
