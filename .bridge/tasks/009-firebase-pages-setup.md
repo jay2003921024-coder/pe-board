@@ -2,7 +2,7 @@
 id: 009
 title: 建立 Firebase 專案、提供設定、部署規則、開 GitHub Pages
 owner: human
-status: todo
+status: done
 depends_on: [007]
 reviewer:
 attempts: 0
@@ -31,5 +31,14 @@ attempts: 0
 9. 部署規則與索引：`npx firebase-tools login` 後 `npx firebase-tools deploy --only firestore:rules,firestore:indexes --project <專案 id>`（或交給 010 由 agent 準備指令後由你執行）。索引建立需要幾分鐘，Firebase 主控台「Firestore → 索引」顯示「已啟用」才算完成。
 
 ## 交接筆記
+
+• firebaseConfig：
+      • apiKey: "AIzaSyDIW37R4ph_4z91wIamqAh8C4A4Q_CxUJM"
+      • authDomain: "pe-board-e2093.firebaseapp.com"
+      • projectId: "pe-board-e2093"
+      • appId: "1:17414469936:web:f0364c3ca91beb07be30f5"
+  • 管理員 email：jay2003921024@gmail.com
+  • GitHub Pages 網址：https://jay2003921024-coder.github.io/pe-board/
+  • 規則與索引部署狀態：待執行部署（指令：npx firebase-tools deploy --only firestore:rules,firestore:indexes --project pe-board-e2093）
 
 <!-- 填寫：firebaseConfig、管理員 email、GitHub Pages 網址、規則與索引是否已部署 -->

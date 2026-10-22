@@ -5,3 +5,39 @@
 
 .canvas-wrap{touch-action:none}
 #board{-webkit-touch-callout:none}
+
+/* 平板／粗指標裝置（AC-14）：所有可點控制項 ≥ 44×44 px，並讓 iPad 橫向（1024×768）與直向（768×1024）工具列與畫布同時完整可見 */
+@media (pointer:coarse){
+  button,select,[role="tab"]{min-width:44px;min-height:44px}
+  .btn,.btn.small,.step-tab,.step-add,.seg button,.tpl-actions button{display:inline-flex;align-items:center;justify-content:center}
+  .btn.small,.seg button,.tpl-actions button,.tpl-actions select{padding:6px 12px;font-size:13px}
+  .tpl-actions{gap:6px}
+  .icon-btn{width:44px;height:44px}
+  .sw{width:44px;height:44px}
+  .nav-btn{align-items:center;padding:8px 12px}
+  .row.check{min-height:44px}
+  .title-in,.field input[type="text"],.field input[type="number"],.lib-tools input[type="search"],.lib-tools input[type="text"],.nav-in,.tpl-rename{min-height:44px}
+
+  .app{padding-block:10px 28px}
+  .top{gap:8px 10px;margin-bottom:10px}
+  .title-in{flex:1 1 160px}
+  .stage{gap:8px}
+  .stage-bar{gap:6px}
+  #board{max-height:calc(100vh - 230px)}
+}
+
+@media (pointer:coarse) and (min-width:900px){
+  .steps{flex-basis:360px}
+}
+
+@media (pointer:coarse) and (min-width:761px) and (max-width:1180px){
+  .work{grid-template-columns:246px minmax(0,1fr);gap:12px}
+  .tools{padding:8px;gap:8px}
+  .tg h3{margin:0 0 4px}
+  .tg-grid{grid-template-columns:repeat(3,1fr);gap:4px}
+  .tool{padding:4px 2px;min-height:46px}
+  .tool svg{width:24px;height:24px}
+  .tool.wide{padding:6px 8px;min-height:44px}
+  .swatches{gap:2px;margin-top:4px;justify-content:space-between}
+  .sw-label{margin-top:4px}
+}

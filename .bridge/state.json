@@ -1,14 +1,16 @@
 {
   "phase": "build",
-  "awaiting": null,
-  "message": "claude 執行失敗（exit 1）：審查任務 005（claude 寫的）。看 .bridge/logs/20261021-165904-claude-review-005-2.log",
+  "awaiting": "human",
+  "message": "任務 009「建立 Firebase 專案、提供設定、部署規則、開 GitHub Pages」需要你本人處理（.bridge/tasks/009-firebase-pages-setup.md）。完成後把 status 改成 done，再執行 run。",
   "spec_hash": "cf6b2da1503eab7380a61aaf40c7dec27333c87e424e9f94cb09bf5cd06bc49d",
   "spec_version": 1,
   "plan_step": "plan",
   "plan_round": 1,
   "verify_round": 0,
   "verify_fails": 0,
-  "pending": [],
+  "pending": [
+    "task-006-a0"
+  ],
   "metrics": {
     "spec_rejections": 0,
     "plan_rejections": 0,
@@ -50,6 +52,8 @@
     "2026-10-21 20:07 claude 完成：實作任務 008「登入列與共享區 UI、我的範本雲端同步」",
     "2026-10-21 20:11 claude 完成：審查任務 008（claude 寫的）",
     "2026-10-21 20:11 任務 008 審查未通過（第 1 次），退回給 claude",
-    "2026-10-21 20:17 claude 完成：實作任務 008「登入列與共享區 UI、我的範本雲端同步」"
+    "2026-10-21 20:17 claude 完成：實作任務 008「登入列與共享區 UI、我的範本雲端同步」",
+    "2026-10-21 20:19 claude 完成：審查任務 008（claude 寫的）",
+    "2026-10-21 20:19 任務 008 審查通過"
   ]
 }
