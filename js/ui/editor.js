@@ -11,6 +11,23 @@ import { $, state, hooks, step, getSel, findObj, selIds, selObjs, setSelection, 
 let board;
 // 平板雙指縮放／平移：pointerId → 最近一次的 client 座標。
 const pointers = new Map();
+// pointerId → 這一指最初命中的節點：onPointerDown 之後 renderBoard() 會用 innerHTML 整個換掉
+// #board 底下的節點，命中節點脫離 DOM 後，瀏覽器仍會把同一指後續的 touchmove 派發給它
+// （W3C Touch Events：事件固定送往 touchstart 時的 Touch.target），不會冒泡到 #board，
+// 所以要在那個節點上也掛一份 onTouchMove，否則 preventDefault() 永遠叫不到，觸發 pointercancel（AC-15）。
+const touchTargets = new Map();
+
+function bindTouchTarget(e) {
+  if (e.pointerType !== 'touch' || !e.target || e.target === board) return;
+  e.target.addEventListener('touchmove', onTouchMove, { passive: false });
+  touchTargets.set(e.pointerId, e.target);
+}
+
+function unbindTouchTarget(e) {
+  if (!e) return;
+  const t = touchTargets.get(e.pointerId);
+  if (t) { t.removeEventListener('touchmove', onTouchMove); touchTargets.delete(e.pointerId); }
+}
 
 function bounds() { return { w: W, h: courtH(state.doc.court) }; }
 
@@ -58,6 +75,16 @@ function startPinch() {
 
 // 兩指的中心點與距離都只用「目前這一幀」的單一 view／畫布版面快照換算，
 // 不混用不同時間點的 getScreenCTM()，避免縮放時因為跨幀座標系不一致而亂跑。
+// 用 getScreenCTM() 而不是 getBoundingClientRect() 換算 client → 場地座標：
+// #board 在觸及 CSS max-height 時，SVG 的 preserveAspectRatio="xMidYMid meet" 會讓實際繪製
+// 寬度小於外框 rect.width（左右留白），用 rect 線性換算會讓雙指縮放的錨點水平偏移（AC-18）；
+// getScreenCTM() 已經把這個留白算進去，兩指的錨點與中心點都要在 renderBoard() 更新 viewBox
+// 之前用同一份 CTM 換算，才會落在同一個座標系快照下。
+function ptRaw(clientX, clientY) {
+  const p = board.createSVGPoint(); p.x = clientX; p.y = clientY;
+  return p.matrixTransform(board.getScreenCTM().inverse());
+}
+
 function pinchMove() {
   const pts = [...pointers.values()];
   if (pts.length < 2) return;
@@ -65,20 +92,17 @@ function pinchMove() {
   const dist = Math.hypot(a.x - b.x, a.y - b.y);
   const centerClient = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
   const drag = state.drag;
-  const rect = board.getBoundingClientRect();
-  if (drag.lastDist && rect.width && rect.height) {
+  if (drag.lastDist) {
     const bd = bounds();
     const view = state.view || defaultView(bd);
     // anchor：上一幀兩指中心所對應的場地座標點，這一幀要讓它跟著移到新的兩指中心下面。
-    const anchor = {
-      x: view.x + (drag.lastCenter.x - rect.left) / rect.width * view.w,
-      y: view.y + (drag.lastCenter.y - rect.top) / rect.height * view.h,
-    };
+    const anchor = ptRaw(drag.lastCenter.x, drag.lastCenter.y);
+    const cur = ptRaw(centerClient.x, centerClient.y);
     const scale = dist / drag.lastDist;
     const w = view.w / scale;
     const h = w * bd.h / bd.w;
-    const rx = (centerClient.x - rect.left) / rect.width;
-    const ry = (centerClient.y - rect.top) / rect.height;
+    const rx = (cur.x - view.x) / view.w;
+    const ry = (cur.y - view.y) / view.h;
     state.view = clampView({ x: anchor.x - rx * w, y: anchor.y - ry * h, w, h }, bd);
     hooks.renderBoard();
   }
@@ -88,6 +112,7 @@ function pinchMove() {
 function onPointerDown(e) {
   if (e.button !== 0) return;
   state.ui.touch = e.pointerType === 'touch';
+  bindTouchTarget(e);
   if (state.anim) { hooks.stopAnim(); return; }
   if (e.pointerType === 'touch') {
     try { board.setPointerCapture(e.pointerId); } catch (err) {}
@@ -178,6 +203,7 @@ function onPointerMove(e) {
 }
 
 function endDrag(e) {
+  unbindTouchTarget(e);
   if (e && pointers.has(e.pointerId)) {
     pointers.delete(e.pointerId);
     if (state.drag && state.drag.kind === 'pinch') { if (pointers.size < 2) state.drag = null; return; }
