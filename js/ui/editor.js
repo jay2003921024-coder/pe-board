@@ -27,17 +27,22 @@ function stopInertia() {
 
 // drag.vx/vy：跟前一次取樣用等權重平均，避免手勢結尾最後一次取樣的雜訊讓滑行速度暴衝；
 // dx/dy 跟呼叫端用來平移的位移同一套單位與方向（panMove 傳 client px 或場地單位，pinchMove 傳場地單位）。
+// 雙指觸控每一幀會先後觸發兩次 pointermove（兩指各一次，間隔常 <1ms）：dt 太小時先把 dx/dy
+// 累加到暫存，滿一段時間再算瞬時速度，避免同幀兩次事件把速度放大數十倍（AC-18 問題 A 的附帶修法）。
+// drag.lastMoveAt 記錄「最後一次真正算出瞬時速度」的時間，供 startInertiaFromDrag 判斷手指是否已停住。
 function trackVelocity(drag, dx, dy) {
   const now = performance.now();
-  if (drag.t !== undefined) {
-    const dt = now - drag.t;
-    if (dt > 0) {
-      const ivx = dx / dt, ivy = dy / dt;
-      drag.vx = drag.vx === undefined ? ivx : (drag.vx + ivx) / 2;
-      drag.vy = drag.vy === undefined ? ivy : (drag.vy + ivy) / 2;
-    }
-  }
+  drag.accDx = (drag.accDx || 0) + dx;
+  drag.accDy = (drag.accDy || 0) + dy;
+  if (drag.t === undefined) { drag.t = now; return; }
+  const dt = now - drag.t;
+  if (dt < 8) return;
+  const ivx = drag.accDx / dt, ivy = drag.accDy / dt;
+  drag.vx = drag.vx === undefined ? ivx : (drag.vx + ivx) / 2;
+  drag.vy = drag.vy === undefined ? ivy : (drag.vy + ivy) / 2;
+  drag.accDx = 0; drag.accDy = 0;
   drag.t = now;
+  drag.lastMoveAt = now;
 }
 
 // apply(dx, dy)：跟 panMove 呼叫 panBy/scrollBy 時同一套「位移」語意（由呼叫端自行取負號套用）。
@@ -67,11 +72,14 @@ function inertiaApplyField(dx, dy) {
   const bd = bounds();
   const view = state.view || defaultView(bd);
   state.view = panBy(view, -dx, -dy, bd);
-  hooks.renderBoard();
+  hooks.renderView();
 }
 
+// 若最後一次有效移動距離放開已超過 80ms，代表手指在放開前已經停住（非甩動 flick），
+// 不應該觸發慣性滑行（AC-18 問題 B）。
 function startInertiaFromDrag(drag) {
-  if (!drag || drag.vx === undefined) return;
+  if (!drag || drag.vx === undefined || !drag.lastMoveAt) return;
+  if (performance.now() - drag.lastMoveAt > 80) return;
   const vx = clampVelocity(drag.vx), vy = clampVelocity(drag.vy);
   startInertia(vx, vy, drag.space === 'client' ? inertiaApplyScroll : inertiaApplyField);
 }
@@ -162,11 +170,15 @@ function pinchMove() {
     const h = w * bd.h / bd.w;
     const rx = (cur.x - view.x) / view.w;
     const ry = (cur.y - view.y) / view.h;
-    const prevX = view.x, prevY = view.y;
     state.view = clampView({ x: anchor.x - rx * w, y: anchor.y - ry * h, w, h }, bd);
-    hooks.renderBoard();
-    // 慣性滑行的取樣：跟 panMove 的場地單位分支用同一套「dx,dy」語意（inertiaApplyField 內部取負號套用）。
-    trackVelocity(drag, prevX - state.view.x, prevY - state.view.y);
+    if (selIds().length) hooks.renderBoard(); else hooks.renderView();
+    // 慣性滑行的取樣：用「兩指中心點」本身的位移換算成場地單位，不能用 view.x 的前後差——
+    // 縮放時 view.x／view.y（viewBox 左上角）會因為 w/h 改變而跟著變，即使兩指中心原地不動，
+    // 那個差值也不是 0，會在原地縮放放開後誤觸發大幅度的錨點飄移（AC-18 問題 A）。
+    const m = board.getScreenCTM().inverse();
+    const dxCenter = (centerClient.x - drag.lastCenter.x) * m.a + (centerClient.y - drag.lastCenter.y) * m.c;
+    const dyCenter = (centerClient.x - drag.lastCenter.x) * m.b + (centerClient.y - drag.lastCenter.y) * m.d;
+    trackVelocity(drag, dxCenter, dyCenter);
     drag.space = 'field';
   }
   drag.lastDist = dist; drag.lastCenter = centerClient;
@@ -175,6 +187,7 @@ function pinchMove() {
 function onPointerDown(e) {
   stopInertia(); // 手指再次按下時立即停止滑行。
   if (e.button !== 0) return;
+  const prevTouch = state.ui.touch;
   state.ui.touch = e.pointerType === 'touch';
   bindTouchTarget(e);
   if (state.anim) { hooks.stopAnim(); return; }
@@ -226,13 +239,18 @@ function onPointerDown(e) {
   }
   // 空白處用選取工具：開始框選（Shift 或多選模式保留目前的選取）。
   const base = multi ? selIds() : [];
+  const hadSel = selIds().length > 0;
   if (!multi) clearSel();
   // 觸控且非多選模式：不框選，單指拖曳＝捲動或平移畫面（014 修正：自己接管這個手勢，不再依賴
   // 瀏覽器原生捲動，避免「先放行捲動、兩指落下才切換成縮放」時與原生捲動手勢互相搶奪造成亂跑／
   // 跳動；放大時平移畫布，沒放大時捲動整個頁面，上下左右都會回應）。
+  // 016 修正：原本無條件呼叫 renderBoard() 會重寫整個 board.innerHTML，讓手指剛按下的
+  // e.target 在手勢啟動瞬間脫離 DOM（AC-15）。沒有選取物件、且觸控狀態沒有切換時不需要
+  // 重繪（overlay 沒有東西要清，placing class 也沒變），略過即可。
   if (state.ui.touch && !multi) {
     state.drag = { kind: 'pan', last: { x: e.clientX, y: e.clientY } };
-    hooks.renderBoard(); hooks.renderProps(); return;
+    if (hadSel || prevTouch !== state.ui.touch) { hooks.renderBoard(); hooks.renderProps(); }
+    return;
   }
   state.drag = { kind: 'box', start: p, cur: p, base };
   hooks.renderBoard(); hooks.renderProps();
@@ -252,7 +270,7 @@ function panMove(e, drag) {
     const dx = dxClient * m.a + dyClient * m.c;
     const dy = dxClient * m.b + dyClient * m.d;
     state.view = panBy(view, -dx, -dy, bd);
-    hooks.renderBoard();
+    hooks.renderView();
     trackVelocity(drag, dx, dy); drag.space = 'field';
   } else {
     window.scrollBy(-dxClient, -dyClient);

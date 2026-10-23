@@ -20,6 +20,8 @@ const noop = () => {};
 export const hooks = {
   renderBoard: noop, renderSteps: noop, renderProps: noop, renderHint: noop, renderTools: noop,
   syncInputs: noop, stopAnim: noop,
+  // 015/016 新增：捲動／平移／慣性滑行期間只更新 viewBox，不重寫整個畫布（AC-15）。
+  renderView: noop,
   // 011 新增：keyboard.js 透過這三個掛勾呼叫 toolbar.js／props.js，不直接互相 import。
   setTool: noop, deleteSel: noop, dupSel: noop,
   // 008 新增：library.js／savetpl.js 透過這個掛勾呼叫 sharearea.js 開啟發布流程；

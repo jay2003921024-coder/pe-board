@@ -9,11 +9,20 @@ import { $, state, hooks, step, getSel, selIds, selObjs } from './state.js';
 let board;
 // 觸控時命中範圍與把手放大（原尺寸基準為 1000 viewBox 寬 ÷ 畫面實際寬度）；把手最小 22 viewBox 單位，常見畫面寬度下約等於 44 CSS px。
 export const TOUCH_PAD = 1.6;
-export function handleR() {
+// pxToSvg：1 CSS px 對應多少 SVG viewBox 單位。優先用 getScreenCTM().a（已含 preserveAspectRatio
+// 留白換算），平板上 #board 實際繪製寬度常小於外框，用 viewW/boundingRect.width 線性換算會低估
+// 觸控命中範圍（AC-14：22 viewBox 單位在縮小後的 iPad 畫面上只剩 20～25 CSS px，未達 44px）。
+function pxToSvg() {
   const viewW = (state.view || defaultView({ w: W, h: courtH(state.doc.court) })).w;
-  const w = board.getBoundingClientRect().width || viewW;
-  const r = Math.max(8, 8 * viewW / w * 0.75);
-  return state.ui.touch ? Math.max(r, 22) : r;
+  const ctm = board.getScreenCTM && board.getScreenCTM();
+  if (ctm && ctm.a) return 1 / ctm.a;
+  return viewW / (board.getBoundingClientRect().width || viewW);
+}
+
+export function handleR() {
+  const k = pxToSvg();
+  const r = Math.max(8, 8 * k * 0.75);
+  return state.ui.touch ? Math.max(r, 22 * k) : r;
 }
 
 export function ring(o, k) {
@@ -57,11 +66,17 @@ export function overlay() {
   return `<g pointer-events="none">${ring(o, k)}</g>` + out;
 }
 
-export function renderBoard() {
-  const { doc, ui } = state;
-  const bounds = { w: W, h: courtH(doc.court) };
+// 只更新 <svg viewBox>，不重寫 board.innerHTML：捲動／平移／慣性滑行期間場地與物件內容
+// 沒有改變，只有可視範圍改變，不需要銷毀重建整個 SVG DOM（AC-15）。
+export function renderView() {
+  const bounds = { w: W, h: courtH(state.doc.court) };
   const view = state.view || defaultView(bounds);
   board.setAttribute('viewBox', `${f(view.x)} ${f(view.y)} ${f(view.w)} ${f(view.h)}`);
+}
+
+export function renderBoard() {
+  const { doc, ui } = state;
+  renderView();
   board.innerHTML = boardContent(doc.court, step(), doc.iconScale, true, ui.touch ? TOUCH_PAD : 1) + overlay();
   board.classList.toggle('placing', ui.tool !== 'select');
 }
@@ -69,5 +84,6 @@ export function renderBoard() {
 export function initBoard() {
   board = $('#board');
   hooks.renderBoard = renderBoard;
+  hooks.renderView = renderView;
   window.addEventListener('resize', () => { if (selIds().length) renderBoard(); });
 }
