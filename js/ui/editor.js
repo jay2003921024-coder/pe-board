@@ -67,7 +67,26 @@ function startInertia(vx, vy, apply) {
   inertiaFrame = requestAnimationFrame(step);
 }
 
-function inertiaApplyScroll(dx, dy) { window.scrollBy(-dx, -dy); }
+// 017 修正：window.scrollBy past 文件邊界時雖然會被瀏覽器夾住（html,body 已設
+// overscroll-behavior-y:none，不會原生回彈），但慣性動畫仍會繼續以為自己在移動，
+// 造成放開手指後殘留的慣性像「撞牆又彈回」。改用 scrollTo 夾在 [0, max] 內，
+// 一旦發現這一幀被夾住（代表已經到底/到頂），立刻停止慣性，不讓它繼續空轉。
+function scrollMax() {
+  const doc = document.documentElement;
+  return {
+    x: Math.max(0, doc.scrollWidth - window.innerWidth),
+    y: Math.max(0, doc.scrollHeight - window.innerHeight),
+  };
+}
+
+function inertiaApplyScroll(dx, dy) {
+  const max = scrollMax();
+  const wantX = window.scrollX - dx, wantY = window.scrollY - dy;
+  const nextX = Math.max(0, Math.min(max.x, wantX));
+  const nextY = Math.max(0, Math.min(max.y, wantY));
+  window.scrollTo(nextX, nextY);
+  if (nextX !== wantX || nextY !== wantY) stopInertia();
+}
 function inertiaApplyField(dx, dy) {
   const bd = bounds();
   const view = state.view || defaultView(bd);
@@ -80,7 +99,15 @@ function inertiaApplyField(dx, dy) {
 function startInertiaFromDrag(drag) {
   if (!drag || drag.vx === undefined || !drag.lastMoveAt) return;
   if (performance.now() - drag.lastMoveAt > 80) return;
-  const vx = clampVelocity(drag.vx), vy = clampVelocity(drag.vy);
+  let vx = clampVelocity(drag.vx), vy = clampVelocity(drag.vy);
+  if (drag.space === 'client') {
+    // 放開手指當下若已經在文件邊界、且速度方向是繼續往邊界外衝，這段慣性本來就不會移動
+    // 任何像素，不啟動它（AC-18 問題三：避免硬推邊界的無效慣性造成撞牆/回彈感）。
+    const max = scrollMax();
+    if ((vx < 0 && window.scrollX >= max.x) || (vx > 0 && window.scrollX <= 0)) vx = 0;
+    if ((vy < 0 && window.scrollY >= max.y) || (vy > 0 && window.scrollY <= 0)) vy = 0;
+    if (!vx && !vy) return;
+  }
   startInertia(vx, vy, drag.space === 'client' ? inertiaApplyScroll : inertiaApplyField);
 }
 
@@ -259,10 +286,23 @@ function onPointerDown(e) {
 // 單指在空白處拖曳（選取工具、非多選模式）：放大時平移畫布，內容跟著手指；
 // 沒放大時捲動整個頁面。用 getScreenCTM() 的縮放係數換算 client px → 場地單位的位移量，
 // 不用換算座標點（跟 ptRaw 不同，這裡只需要「位移」，不需要「位置」）。
+// 017 修正：手指按住不動時，電容式觸控面板仍會回報 1~2px 的微噪訊 pointermove，若照單
+// 全收呼叫 scrollBy/panBy，每一點點位移都會讓 #board 的 100vh 相關尺寸或 viewBox 重算，
+// 長按時這些微噪訊會被誤認成「正在捲動」而連續觸發（AC-15 問題一、二）。在手勢確認前
+// （drag.confirmed 為 false）先把位移累積在 drag.accX/accY，直到累積距離超過 8px
+// 才視為真的開始捲動／平移；確認後一律套用累積到的位移，不再重新計算門檻，之後每一幀
+// 照常即時套用，不影響慢速但持續的滑動（AC-15 問題二的跟手度）。
 function panMove(e, drag) {
-  const dxClient = e.clientX - drag.last.x, dyClient = e.clientY - drag.last.y;
+  let dxClient = e.clientX - drag.last.x, dyClient = e.clientY - drag.last.y;
   drag.last = { x: e.clientX, y: e.clientY };
   if (!dxClient && !dyClient) return;
+  if (!drag.confirmed) {
+    drag.accX = (drag.accX || 0) + dxClient;
+    drag.accY = (drag.accY || 0) + dyClient;
+    if (Math.hypot(drag.accX, drag.accY) < 8) return;
+    drag.confirmed = true;
+    dxClient = drag.accX; dyClient = drag.accY;
+  }
   const bd = bounds();
   const view = state.view || defaultView(bd);
   if (zoomLevel(view, bd) > 1) {
@@ -347,5 +387,8 @@ export function initEditor() {
   board.addEventListener('pointerup', endDrag);
   board.addEventListener('pointercancel', endDrag);
   board.addEventListener('touchmove', onTouchMove, { passive: false });
+  // 017 修正：單指長按畫布空白處時，iOS 原生會在一段時間後跳出「放大鏡/複製」系統選單
+  // （contextmenu），與我們自己接管的捲動手勢互搶，也會讓畫面瞬間跳動（AC-15 問題一）。
+  board.addEventListener('contextmenu', e => e.preventDefault());
   board.addEventListener('dblclick', () => { const i = $('#propLabel'); if (i) { i.focus(); i.select(); } });
 }

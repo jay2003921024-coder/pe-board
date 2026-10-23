@@ -23,7 +23,11 @@
   .title-in{flex:1 1 160px}
   .stage{gap:8px}
   .stage-bar{gap:6px}
-  #board{max-height:calc(100vh - 230px)}
+  /* 017 修正：100vh 隨 Safari 網址列顯示/隱藏而改變，單指按住空白處時的微幅位移會觸發
+     window.scrollBy → 網址列切換 → 100vh 改變 → #board 改變尺寸 → 誘發下一輪捲動判斷，
+     形成 60Hz 震盪死循環（狂閃甚至閃退）。100svh（small viewport height）不受網址列伸縮影響，
+     維持畫布尺寸恆定；不支援 svh 的瀏覽器會停留在前一行的 100vh 當 fallback。 */
+  #board{max-height:calc(100vh - 230px);max-height:calc(100svh - 230px)}
 }
 
 @media (pointer:coarse) and (min-width:900px){
