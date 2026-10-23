@@ -18,7 +18,10 @@
 }
 /* Same basics the Claude page wrapper adds, so the file also works when opened directly in a browser */
 [hidden]{display:none!important}
-html,body{margin:0}
+/* 15 修正：iPad Safari 在捲到頂/底或手指滑出畫布時，若還有殘留的橡皮筋回彈（overscroll），
+   會被系統判定成「下拉重新整理」手勢，整頁閃一下又重新載入；畫布的捲動已經由 editor.js 自己接管
+   並夾在文件範圍內，不需要瀏覽器原生的回彈，直接關閉即可。 */
+html,body{margin:0;overscroll-behavior-y:none}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:14px;line-height:1.5}
 button,input,select,textarea{font:inherit;color:inherit}

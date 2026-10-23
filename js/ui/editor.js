@@ -4,7 +4,7 @@ import { W, uid } from '../core/util.js';
 import { courtH, COURTS } from '../core/courts.js';
 import { ITEMS, LINES, isLine, clampSize } from '../core/items.js';
 import { qpt } from '../core/render.js';
-import { clampView, defaultView, zoomLevel, panBy } from '../core/viewport.js';
+import { clampView, defaultView, zoomLevel, panBy, clampVelocity, distanceAt, inertiaStopTime } from '../core/viewport.js';
 import { shiftObj, nextLabel } from '../core/doc.js';
 import { $, state, hooks, step, getSel, findObj, selIds, selObjs, setSelection, selectOne, clearSel, pushUndo, history, save, updateHistory } from './state.js';
 
@@ -16,6 +16,65 @@ const pointers = new Map();
 // （W3C Touch Events：事件固定送往 touchstart 時的 Touch.target），不會冒泡到 #board，
 // 所以要在那個節點上也掛一份 onTouchMove，否則 preventDefault() 永遠叫不到，觸發 pointercancel（AC-15）。
 const touchTargets = new Map();
+
+// 15 加強：慣性滑行。減速參數集中在 core/viewport.js 的 INERTIA；這裡只負責「取樣手勢速度」與
+// 「用 requestAnimationFrame 依純函式算出的位移逐幀套用」，不重算衰減公式本身。
+let inertiaFrame = null;
+
+function stopInertia() {
+  if (inertiaFrame !== null) { cancelAnimationFrame(inertiaFrame); inertiaFrame = null; }
+}
+
+// drag.vx/vy：跟前一次取樣用等權重平均，避免手勢結尾最後一次取樣的雜訊讓滑行速度暴衝；
+// dx/dy 跟呼叫端用來平移的位移同一套單位與方向（panMove 傳 client px 或場地單位，pinchMove 傳場地單位）。
+function trackVelocity(drag, dx, dy) {
+  const now = performance.now();
+  if (drag.t !== undefined) {
+    const dt = now - drag.t;
+    if (dt > 0) {
+      const ivx = dx / dt, ivy = dy / dt;
+      drag.vx = drag.vx === undefined ? ivx : (drag.vx + ivx) / 2;
+      drag.vy = drag.vy === undefined ? ivy : (drag.vy + ivy) / 2;
+    }
+  }
+  drag.t = now;
+}
+
+// apply(dx, dy)：跟 panMove 呼叫 panBy/scrollBy 時同一套「位移」語意（由呼叫端自行取負號套用）。
+function startInertia(vx, vy, apply) {
+  stopInertia();
+  const v0 = Math.hypot(vx, vy);
+  if (!v0) return;
+  const ux = vx / v0, uy = vy / v0;
+  const stopAt = inertiaStopTime(v0);
+  if (!stopAt) return;
+  const start = performance.now();
+  let prevDist = 0;
+  function step(now) {
+    const t = Math.min(now - start, stopAt);
+    const dist = distanceAt(v0, t);
+    const delta = dist - prevDist;
+    prevDist = dist;
+    if (delta) apply(ux * delta, uy * delta);
+    if (t >= stopAt) { inertiaFrame = null; return; }
+    inertiaFrame = requestAnimationFrame(step);
+  }
+  inertiaFrame = requestAnimationFrame(step);
+}
+
+function inertiaApplyScroll(dx, dy) { window.scrollBy(-dx, -dy); }
+function inertiaApplyField(dx, dy) {
+  const bd = bounds();
+  const view = state.view || defaultView(bd);
+  state.view = panBy(view, -dx, -dy, bd);
+  hooks.renderBoard();
+}
+
+function startInertiaFromDrag(drag) {
+  if (!drag || drag.vx === undefined) return;
+  const vx = clampVelocity(drag.vx), vy = clampVelocity(drag.vy);
+  startInertia(vx, vy, drag.space === 'client' ? inertiaApplyScroll : inertiaApplyField);
+}
 
 function bindTouchTarget(e) {
   if (e.pointerType !== 'touch' || !e.target || e.target === board) return;
@@ -103,13 +162,18 @@ function pinchMove() {
     const h = w * bd.h / bd.w;
     const rx = (cur.x - view.x) / view.w;
     const ry = (cur.y - view.y) / view.h;
+    const prevX = view.x, prevY = view.y;
     state.view = clampView({ x: anchor.x - rx * w, y: anchor.y - ry * h, w, h }, bd);
     hooks.renderBoard();
+    // 慣性滑行的取樣：跟 panMove 的場地單位分支用同一套「dx,dy」語意（inertiaApplyField 內部取負號套用）。
+    trackVelocity(drag, prevX - state.view.x, prevY - state.view.y);
+    drag.space = 'field';
   }
   drag.lastDist = dist; drag.lastCenter = centerClient;
 }
 
 function onPointerDown(e) {
+  stopInertia(); // 手指再次按下時立即停止滑行。
   if (e.button !== 0) return;
   state.ui.touch = e.pointerType === 'touch';
   bindTouchTarget(e);
@@ -189,8 +253,10 @@ function panMove(e, drag) {
     const dy = dxClient * m.b + dyClient * m.d;
     state.view = panBy(view, -dx, -dy, bd);
     hooks.renderBoard();
+    trackVelocity(drag, dx, dy); drag.space = 'field';
   } else {
     window.scrollBy(-dxClient, -dyClient);
+    trackVelocity(drag, dxClient, dyClient); drag.space = 'client';
   }
 }
 
@@ -231,11 +297,14 @@ function endDrag(e) {
   unbindTouchTarget(e);
   if (e && pointers.has(e.pointerId)) {
     pointers.delete(e.pointerId);
-    if (state.drag && state.drag.kind === 'pinch') { if (pointers.size < 2) state.drag = null; return; }
+    if (state.drag && state.drag.kind === 'pinch') {
+      if (pointers.size < 2) { const d = state.drag; state.drag = null; startInertiaFromDrag(d); }
+      return;
+    }
   }
   const drag = state.drag;
   if (!drag) return;
-  if (drag.kind === 'pan') { state.drag = null; return; }
+  if (drag.kind === 'pan') { state.drag = null; startInertiaFromDrag(drag); return; }
   const o = getSel();
   if (drag.kind === 'new' && o && Math.hypot(o.x2 - o.x1, o.y2 - o.y1) < 10) {
     step().items = step().items.filter(x => x !== o); clearSel(); history.popLast(); updateHistory();

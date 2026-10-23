@@ -46,7 +46,10 @@ export function overlay() {
     return `<g pointer-events="none">${ring(o, k)}</g><g data-handle="ts"><rect x="${f(o.x + hw - hr * 0.8)}" y="${f(o.y + hh - hr * 0.8)}" width="${f(hr * 1.6)}" height="${f(hr * 1.6)}" rx="2" fill="#fff" stroke="#1f5fbf" stroke-width="${f(hr / 3)}" style="cursor:nwse-resize"/></g>` + out;
   }
   if (isLine(o)) {
-    const h = (name, x, y, fill) => `<g data-handle="${name}"><circle cx="${f(x)}" cy="${f(y)}" r="${f(hr)}" fill="${fill}" stroke="#1f5fbf" stroke-width="${f(hr / 3)}"/></g>`;
+    // 15 修正：觸控時可點擊範圍（data-handle 所在的 <g>，靠外層透明圓圈撐大，維持 ≥44px 命中）
+    // 跟可見圓圈（內層實心圓圈，縮小一半避免擋住箭頭本身）分開兩個圓圈畫；桌機兩圈同尺寸、外觀不變。
+    const vr = state.ui.touch ? hr / 2 : hr;
+    const h = (name, x, y, fill) => `<g data-handle="${name}"><circle cx="${f(x)}" cy="${f(y)}" r="${f(hr)}" fill="transparent" pointer-events="all"/><circle cx="${f(x)}" cy="${f(y)}" r="${f(vr)}" fill="${fill}" stroke="#1f5fbf" stroke-width="${f(vr / 3)}" pointer-events="none"/></g>`;
     if (o.type === 'zone') return h('p1', o.x1, o.y1, '#fff') + h('p2', o.x2, o.y2, '#fff');
     const [mx, my] = qpt(0.5, o);
     return h('p1', o.x1, o.y1, '#fff') + h('p2', o.x2, o.y2, '#fff') + h('c', mx, my, '#f2c230');
