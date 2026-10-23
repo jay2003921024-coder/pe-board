@@ -57,7 +57,7 @@
 .icon-btn:disabled{opacity:.35;cursor:default}
 .icon-btn svg{width:18px;height:18px}
 .canvas-wrap{background:var(--stage);border-radius:12px;padding:10px;display:flex;justify-content:center}
-#board{display:block;width:100%;height:auto;max-height:74vh;touch-action:pan-y;user-select:none;-webkit-user-select:none;border-radius:6px}
+#board{display:block;width:100%;height:auto;max-height:74vh;touch-action:none;user-select:none;-webkit-user-select:none;border-radius:6px}
 #board.placing{cursor:crosshair}
 #board .it,#board [data-id]{cursor:move}
 #board.placing [data-id]{cursor:crosshair}

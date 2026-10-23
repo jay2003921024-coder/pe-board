@@ -4,7 +4,7 @@ import { W, uid } from '../core/util.js';
 import { courtH, COURTS } from '../core/courts.js';
 import { ITEMS, LINES, isLine, clampSize } from '../core/items.js';
 import { qpt } from '../core/render.js';
-import { clampView, defaultView } from '../core/viewport.js';
+import { clampView, defaultView, zoomLevel, panBy } from '../core/viewport.js';
 import { shiftObj, nextLabel } from '../core/doc.js';
 import { $, state, hooks, step, getSel, findObj, selIds, selObjs, setSelection, selectOne, clearSel, pushUndo, history, save, updateHistory } from './state.js';
 
@@ -163,11 +163,35 @@ function onPointerDown(e) {
   // 空白處用選取工具：開始框選（Shift 或多選模式保留目前的選取）。
   const base = multi ? selIds() : [];
   if (!multi) clearSel();
-  // 觸控且非多選模式：不框選，放開讓這一指的滑動可以捲動頁面（AC-15 只要求點空白處能取消選取；
-  // 框選是多選模式才需要的手勢，見 005 任務：多選模式下「空白處拖曳＝框選」）。
-  if (state.ui.touch && !multi) { hooks.renderBoard(); hooks.renderProps(); return; }
+  // 觸控且非多選模式：不框選，單指拖曳＝捲動或平移畫面（014 修正：自己接管這個手勢，不再依賴
+  // 瀏覽器原生捲動，避免「先放行捲動、兩指落下才切換成縮放」時與原生捲動手勢互相搶奪造成亂跑／
+  // 跳動；放大時平移畫布，沒放大時捲動整個頁面，上下左右都會回應）。
+  if (state.ui.touch && !multi) {
+    state.drag = { kind: 'pan', last: { x: e.clientX, y: e.clientY } };
+    hooks.renderBoard(); hooks.renderProps(); return;
+  }
   state.drag = { kind: 'box', start: p, cur: p, base };
   hooks.renderBoard(); hooks.renderProps();
+}
+
+// 單指在空白處拖曳（選取工具、非多選模式）：放大時平移畫布，內容跟著手指；
+// 沒放大時捲動整個頁面。用 getScreenCTM() 的縮放係數換算 client px → 場地單位的位移量，
+// 不用換算座標點（跟 ptRaw 不同，這裡只需要「位移」，不需要「位置」）。
+function panMove(e, drag) {
+  const dxClient = e.clientX - drag.last.x, dyClient = e.clientY - drag.last.y;
+  drag.last = { x: e.clientX, y: e.clientY };
+  if (!dxClient && !dyClient) return;
+  const bd = bounds();
+  const view = state.view || defaultView(bd);
+  if (zoomLevel(view, bd) > 1) {
+    const m = board.getScreenCTM().inverse();
+    const dx = dxClient * m.a + dyClient * m.c;
+    const dy = dxClient * m.b + dyClient * m.d;
+    state.view = panBy(view, -dx, -dy, bd);
+    hooks.renderBoard();
+  } else {
+    window.scrollBy(-dxClient, -dyClient);
+  }
 }
 
 function onPointerMove(e) {
@@ -177,6 +201,7 @@ function onPointerMove(e) {
   }
   const drag = state.drag;
   if (!drag || drag.kind === 'pinch') return;
+  if (drag.kind === 'pan') { panMove(e, drag); return; }
   const p = pt(e);
   if (drag.kind === 'box') { drag.cur = p; setSelection([...drag.base, ...boxHits(drag.start, p)]); hooks.renderBoard(); return; }
   if (drag.kind === 'move') {
@@ -210,6 +235,7 @@ function endDrag(e) {
   }
   const drag = state.drag;
   if (!drag) return;
+  if (drag.kind === 'pan') { state.drag = null; return; }
   const o = getSel();
   if (drag.kind === 'new' && o && Math.hypot(o.x2 - o.x1, o.y2 - o.y1) < 10) {
     step().items = step().items.filter(x => x !== o); clearSel(); history.popLast(); updateHistory();
@@ -220,8 +246,9 @@ function endDrag(e) {
   save();
 }
 
-// CSS 的 touch-action 預設放行捲動（見 css/touch.css），畫圖／拖曳／縮放時才攔下原生捲動；
-// 空白處用單指框選只有多選模式才會啟用，其餘情況 state.drag 為 null，讓手指可以捲動頁面。
+// CSS 的 touch-action 設為 none（見 css/touch.css），畫布範圍內一律自己接管捲動／縮放
+// （014：不讓瀏覽器原生捲動參與決策，避免它跟兩指縮放互搶造成畫面亂跑／跳動）；
+// 單指在空白處拖曳時 state.drag.kind 是 'pan'，一樣要擋掉原生行為，捲動／平移由 panMove() 處理。
 function onTouchMove(e) {
   if (state.drag) e.preventDefault();
 }

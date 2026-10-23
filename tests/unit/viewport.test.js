@@ -30,6 +30,16 @@ test('zoomAt：放大 2 倍，寬高各減半，且中心點縮放前後的相�
   assert.equal((center.y - v.y) / v.h, 0.4);
 });
 
+test('zoomAt：014 回饋的例子——在 (300,200) 捏合放大 2 倍，該點對應的畫布座標不變', () => {
+  const view = defaultView(bounds);
+  const center = { x: 300, y: 200 };
+  const v = zoomAt(view, center, 2, bounds);
+  // 縮放前後，螢幕上同一個點（兩指中點）對應到的場地座標要相同：
+  // 縮放前它在 view 內的比例乘上新 view 的寬高、加上新 view 的原點，應該還是原來那個點。
+  assert.equal(v.x + (center.x - view.x) / view.w * v.w, center.x);
+  assert.equal(v.y + (center.y - view.y) / view.h * v.h, center.y);
+});
+
 test('zoomAt：縮放倍率夾在 1～4（w 不會小於 bounds.w/4）', () => {
   const view = defaultView(bounds);
   const v = zoomAt(view, { x: 500, y: 300 }, 100, bounds);

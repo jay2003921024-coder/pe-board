@@ -3,7 +3,7 @@
 .touch-bar button{min-width:44px;min-height:44px}
 .touch-bar #btnTouchMulti[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 
-.canvas-wrap{touch-action:pan-y}
+.canvas-wrap{touch-action:none}
 #board{-webkit-touch-callout:none}
 
 /* 平板／粗指標裝置（AC-14）：所有可點控制項 ≥ 44×44 px，並讓 iPad 橫向（1024×768）與直向（768×1024）工具列與畫布同時完整可見 */
