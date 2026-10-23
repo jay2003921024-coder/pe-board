@@ -10,7 +10,7 @@ plan_review = true
 
 [limits]
 max_review_attempts = 3     # 同一任務 review 失敗幾次後停下來找你
-max_verify_rounds = 3       # 驗收失敗→修正 的循環上限
+max_verify_rounds = 5       # 驗收失敗→修正 的循環上限
 agent_timeout_sec = 1800
 
 # 各 agent 的呼叫方式。{prompt} 會被替換成提示內容。

@@ -67,3 +67,46 @@ export function inertiaStopTime(v0, decayPerMs = INERTIA.decayPerMs, minVelocity
 export function totalInertiaDistance(v0, decayPerMs = INERTIA.decayPerMs, minVelocity = INERTIA.minVelocity) {
   return distanceAt(v0, inertiaStopTime(v0, decayPerMs, minVelocity), decayPerMs);
 }
+
+// 慣性滑行的逐幀推進器（不碰 requestAnimationFrame，呼叫端自己排程）。
+// 回傳 step(elapsedMs)：算出這一幀的位移交給 apply(dx, dy)；apply 回傳 false 代表撞到邊界要停。
+// step 回傳 true 才需要排下一幀（verify-r7：原本停止旗標會被「無條件排下一幀」覆蓋，撞底後持續空轉）。
+// 初速太小、不需要滑行時回傳 null。
+export function inertiaStepper(vx, vy, apply) {
+  const v0 = Math.hypot(vx, vy);
+  const stopAt = v0 ? inertiaStopTime(v0) : 0;
+  if (!stopAt) return null;
+  const ux = vx / v0, uy = vy / v0;
+  let prevDist = 0;
+  return elapsedMs => {
+    const t = Math.min(elapsedMs, stopAt);
+    const dist = distanceAt(v0, t);
+    const delta = dist - prevDist;
+    prevDist = dist;
+    if (delta && apply(ux * delta, uy * delta) === false) return false;
+    return t < stopAt;
+  };
+}
+
+// iPad 等高解析度螢幕上，捲到底時 scrollY 可能是 max - 0.5，邊界判斷要容許次像素誤差。
+export const EDGE_EPS = 1;
+
+// 純函式：把一幀的捲動位移（手指位移，頁面往反方向捲）夾在 [0, max] 內。
+// stop：有移動需求的軸全都被夾住才算撞到邊界；垂直滑動帶一點水平分量、但頁面沒有水平捲軸時，
+// 只有水平軸被夾住，不能因此中斷垂直慣性。
+export function clampScroll(pos, delta, max) {
+  const wantX = pos.x - delta.x, wantY = pos.y - delta.y;
+  const x = Math.max(0, Math.min(max.x, wantX));
+  const y = Math.max(0, Math.min(max.y, wantY));
+  const stuckX = !delta.x || x !== wantX;
+  const stuckY = !delta.y || y !== wantY;
+  return { x, y, stop: stuckX && stuckY };
+}
+
+// 純函式：放開手指時，這一軸已經貼在邊界、速度又往邊界外衝，就不需要慣性（回傳 0）。
+// v < 0 代表手指往上／左甩、頁面往 max 方向捲。
+export function edgeVelocity(v, pos, max, eps = EDGE_EPS) {
+  if (v < 0 && pos >= max - eps) return 0;
+  if (v > 0 && pos <= eps) return 0;
+  return v;
+}

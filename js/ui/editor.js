@@ -4,7 +4,7 @@ import { W, uid } from '../core/util.js';
 import { courtH, COURTS } from '../core/courts.js';
 import { ITEMS, LINES, isLine, clampSize } from '../core/items.js';
 import { qpt } from '../core/render.js';
-import { clampView, defaultView, zoomLevel, panBy, clampVelocity, distanceAt, inertiaStopTime } from '../core/viewport.js';
+import { clampView, defaultView, zoomLevel, panBy, clampVelocity, inertiaStepper, clampScroll, edgeVelocity } from '../core/viewport.js';
 import { shiftObj, nextLabel } from '../core/doc.js';
 import { $, state, hooks, step, getSel, findObj, selIds, selObjs, setSelection, selectOne, clearSel, pushUndo, history, save, updateHistory } from './state.js';
 
@@ -46,31 +46,20 @@ function trackVelocity(drag, dx, dy) {
 }
 
 // apply(dx, dy)：跟 panMove 呼叫 panBy/scrollBy 時同一套「位移」語意（由呼叫端自行取負號套用）。
+// apply 回傳 false 代表撞到邊界；逐幀邏輯在 core/viewport.js 的 inertiaStepper（有單元測試）。
 function startInertia(vx, vy, apply) {
   stopInertia();
-  const v0 = Math.hypot(vx, vy);
-  if (!v0) return;
-  const ux = vx / v0, uy = vy / v0;
-  const stopAt = inertiaStopTime(v0);
-  if (!stopAt) return;
+  const step = inertiaStepper(vx, vy, apply);
+  if (!step) return;
   const start = performance.now();
-  let prevDist = 0;
-  function step(now) {
-    const t = Math.min(now - start, stopAt);
-    const dist = distanceAt(v0, t);
-    const delta = dist - prevDist;
-    prevDist = dist;
-    if (delta) apply(ux * delta, uy * delta);
-    if (t >= stopAt) { inertiaFrame = null; return; }
-    inertiaFrame = requestAnimationFrame(step);
-  }
-  inertiaFrame = requestAnimationFrame(step);
+  const frame = now => { inertiaFrame = step(now - start) ? requestAnimationFrame(frame) : null; };
+  inertiaFrame = requestAnimationFrame(frame);
 }
 
 // 017 修正：window.scrollBy past 文件邊界時雖然會被瀏覽器夾住（html,body 已設
 // overscroll-behavior-y:none，不會原生回彈），但慣性動畫仍會繼續以為自己在移動，
 // 造成放開手指後殘留的慣性像「撞牆又彈回」。改用 scrollTo 夾在 [0, max] 內，
-// 一旦發現這一幀被夾住（代表已經到底/到頂），立刻停止慣性，不讓它繼續空轉。
+// 一旦發現這一幀被夾住（代表已經到底/到頂），回傳 false 讓慣性停止，不讓它繼續空轉。
 function scrollMax() {
   const doc = document.documentElement;
   return {
@@ -80,12 +69,9 @@ function scrollMax() {
 }
 
 function inertiaApplyScroll(dx, dy) {
-  const max = scrollMax();
-  const wantX = window.scrollX - dx, wantY = window.scrollY - dy;
-  const nextX = Math.max(0, Math.min(max.x, wantX));
-  const nextY = Math.max(0, Math.min(max.y, wantY));
-  window.scrollTo(nextX, nextY);
-  if (nextX !== wantX || nextY !== wantY) stopInertia();
+  const next = clampScroll({ x: window.scrollX, y: window.scrollY }, { x: dx, y: dy }, scrollMax());
+  window.scrollTo(next.x, next.y);
+  return !next.stop;
 }
 function inertiaApplyField(dx, dy) {
   const bd = bounds();
@@ -104,8 +90,8 @@ function startInertiaFromDrag(drag) {
     // 放開手指當下若已經在文件邊界、且速度方向是繼續往邊界外衝，這段慣性本來就不會移動
     // 任何像素，不啟動它（AC-18 問題三：避免硬推邊界的無效慣性造成撞牆/回彈感）。
     const max = scrollMax();
-    if ((vx < 0 && window.scrollX >= max.x) || (vx > 0 && window.scrollX <= 0)) vx = 0;
-    if ((vy < 0 && window.scrollY >= max.y) || (vy > 0 && window.scrollY <= 0)) vy = 0;
+    vx = edgeVelocity(vx, window.scrollX, max.x);
+    vy = edgeVelocity(vy, window.scrollY, max.y);
     if (!vx && !vy) return;
   }
   startInertia(vx, vy, drag.space === 'client' ? inertiaApplyScroll : inertiaApplyField);
@@ -292,7 +278,9 @@ function onPointerDown(e) {
 // （drag.confirmed 為 false）先把位移累積在 drag.accX/accY，直到累積距離超過 8px
 // 才視為真的開始捲動／平移；確認後一律套用累積到的位移，不再重新計算門檻，之後每一幀
 // 照常即時套用，不影響慢速但持續的滑動（AC-15 問題二的跟手度）。
+// 確認那一幀補上的累積位移是好幾幀的量；算速度時只按比例取這一幀本身的位移（verify-r7：否則初速被放大、甩得太遠）。
 function panMove(e, drag) {
+  let k = 1;
   let dxClient = e.clientX - drag.last.x, dyClient = e.clientY - drag.last.y;
   drag.last = { x: e.clientX, y: e.clientY };
   if (!dxClient && !dyClient) return;
@@ -301,6 +289,7 @@ function panMove(e, drag) {
     drag.accY = (drag.accY || 0) + dyClient;
     if (Math.hypot(drag.accX, drag.accY) < 8) return;
     drag.confirmed = true;
+    k = Math.hypot(dxClient, dyClient) / Math.hypot(drag.accX, drag.accY);
     dxClient = drag.accX; dyClient = drag.accY;
   }
   const bd = bounds();
@@ -311,10 +300,12 @@ function panMove(e, drag) {
     const dy = dxClient * m.b + dyClient * m.d;
     state.view = panBy(view, -dx, -dy, bd);
     hooks.renderView();
-    trackVelocity(drag, dx, dy); drag.space = 'field';
+    trackVelocity(drag, dx * k, dy * k);
+    drag.space = 'field';
   } else {
     window.scrollBy(-dxClient, -dyClient);
-    trackVelocity(drag, dxClient, dyClient); drag.space = 'client';
+    trackVelocity(drag, dxClient * k, dyClient * k);
+    drag.space = 'client';
   }
 }
 

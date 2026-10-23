@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {
   defaultView, clampView, zoomAt, panBy, zoomLevel,
   INERTIA, clampVelocity, velocityAt, distanceAt, inertiaStopTime, totalInertiaDistance,
+  inertiaStepper, clampScroll, edgeVelocity, EDGE_EPS,
 } from '../../js/core/viewport.js';
 
 const bounds = { w: 1000, h: 600 };
@@ -114,4 +115,63 @@ test('totalInertiaDistance：給定初速 1.5（場地單位/毫秒），滑行�
 
 test('totalInertiaDistance：初速越快，總滑行距離越遠', () => {
   assert.ok(totalInertiaDistance(2) > totalInertiaDistance(1));
+});
+
+// verify-r7：慣性撞到邊界要停，不能繼續空轉。
+const runStepper = (step, frameMs = 16, maxFrames = 2000) => {
+  let frames = 0;
+  while (frames < maxFrames && step(++frames * frameMs));
+  return frames;
+};
+
+test('inertiaStepper：沒撞到邊界時跑完整段，總位移等於 totalInertiaDistance', () => {
+  let moved = 0;
+  const step = inertiaStepper(0, -2, (dx, dy) => { moved += dy; });
+  runStepper(step);
+  assert.ok(Math.abs(moved - totalInertiaDistance(-2)) < 1e-6);
+});
+
+test('inertiaStepper：apply 回傳 false 後立刻停止，不再呼叫 apply', () => {
+  // 頁面 scrollY=468、max=486，往上甩（頁面往下捲），撞到 486 就該停。
+  let y = 468, calls = 0, callsAtMax = 0;
+  const step = inertiaStepper(0, -2, (dx, dy) => {
+    calls++;
+    if (y >= 486) callsAtMax++;
+    const next = clampScroll({ x: 0, y }, { x: dx, y: dy }, { x: 0, y: 486 });
+    y = next.y;
+    return !next.stop;
+  });
+  const frames = runStepper(step);
+  assert.equal(y, 486);
+  assert.equal(callsAtMax, 0, '已經在底端之後不應該再推');
+  assert.equal(calls, frames, '回傳 false 的那一幀之後沒有下一幀');
+  assert.ok(frames < inertiaStopTime(2) / 16, '比自然停止更早結束');
+});
+
+test('inertiaStepper：初速太小不滑行', () => {
+  assert.equal(inertiaStepper(0, 0, () => {}), null);
+  assert.equal(inertiaStepper(INERTIA.minVelocity / 2, 0, () => {}), null);
+});
+
+test('clampScroll：撞到底端才算 stop', () => {
+  const max = { x: 0, y: 486 };
+  assert.deepEqual(clampScroll({ x: 0, y: 470 }, { x: 0, y: -32 }, max), { x: 0, y: 486, stop: true });
+  assert.deepEqual(clampScroll({ x: 0, y: 200 }, { x: 0, y: -10 }, max), { x: 0, y: 210, stop: false });
+  assert.deepEqual(clampScroll({ x: 0, y: 5 }, { x: 0, y: 10 }, max), { x: 0, y: 0, stop: true });
+});
+
+test('clampScroll：垂直滑動帶一點水平分量、頁面沒有水平捲軸時，不能提早停', () => {
+  const r = clampScroll({ x: 0, y: 200 }, { x: 2, y: -10 }, { x: 0, y: 486 });
+  assert.equal(r.x, 0);
+  assert.equal(r.y, 210);
+  assert.equal(r.stop, false);
+});
+
+test('edgeVelocity：已貼在邊界且往外甩才歸零，容許次像素誤差', () => {
+  assert.equal(EDGE_EPS, 1);
+  assert.equal(edgeVelocity(-1, 485.5, 486), 0);
+  assert.equal(edgeVelocity(-1, 400, 486), -1);
+  assert.equal(edgeVelocity(1, 0.5, 486), 0);
+  assert.equal(edgeVelocity(1, 485.5, 486), 1, '在底端往回甩要能滑');
+  assert.equal(edgeVelocity(-1, 0, 486), -1, '在頂端往下捲要能滑');
 });
