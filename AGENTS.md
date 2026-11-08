@@ -10,6 +10,7 @@
 | Claude Code | `claude` |
 | Gemini CLI | `gemini` |
 | Antigravity IDE 內的 agent | `antigravity` |
+| Antigravity 指令列（`agy`，headless）換模型的分身 | `antigravity_sonnet`（審查）、`antigravity_flash`（文件） |
 
 ## 開工前必讀
 

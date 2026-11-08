@@ -6,7 +6,7 @@
 1. 閱讀 AGENTS.md、.bridge/SPEC.md、.bridge/PLAN.md、.bridge/DECISIONS.md 與任務檔。
 2. 若任務檔的「交接筆記」或 {{previous_review}} 中有上一輪的 review 意見，優先修正那些問題。
 3. 實作任務，只碰這個任務需要的檔案。
-4. 自我驗證：執行相關的測試（測試指令：{{test_command}}），確認涵蓋的 AC 都滿足。
+4. 自我驗證：執行相關的測試（測試指令：{{test_command}}），確認涵蓋的 AC 都滿足。只需要摘要和失敗的部分：Claude 可以接 `2>&1 | tail -n 40`，或只跑相關的測試檔。
 5. 在任務檔「交接筆記」寫：做了什麼、怎麼驗證、已知限制。
 6. 把任務檔的 `status` 改成 `review`。
 

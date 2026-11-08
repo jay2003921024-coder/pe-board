@@ -1,5 +1,5 @@
 <!-- bridge:plan -->
-你是這個專案的 planner。先閱讀 AGENTS.md、.bridge/SPEC.md（已鎖定）、.bridge/USER_PROFILE.md、.bridge/DECISIONS.md，以及現有的程式碼（如果有）。
+你是這個專案的 planner。先閱讀 AGENTS.md、.bridge/SPEC.md（已鎖定）、.bridge/USER_PROFILE.md、.bridge/DECISIONS.md。現有的程式碼（如果有）先用 Glob／Grep 找出跟 SPEC 相關的部分再讀，不要逐檔通讀。
 
 請完成：
 1. 填寫 .bridge/PLAN.md：架構概述、技術選擇與理由、任務拆解表、測試策略、風險。
@@ -13,6 +13,8 @@
   - claude：後端、核心邏輯、資料處理、CLI、重構、整合
   - gemini：前端元件、UI、需要大量閱讀既有程式碼的任務
   - antigravity：需要在瀏覽器或畫面上反覆目視調整的 UI 任務（它要人在 IDE 內手動觸發，請只在明顯值得時使用）
+  - antigravity_flash：只改文件的任務（README、使用說明）。文件任務優先分給它
+  - antigravity_sonnet：只當審查者，不要分配任務
   - human：需要使用者本人做的事（申請 API key、買網域等）
 - 第一個任務通常是專案骨架與測試環境；設定好讓 `{{test_command}}` 能執行（若此欄為空，請在 PLAN 中建議一個測試指令）。
 

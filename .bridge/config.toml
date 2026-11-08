@@ -16,8 +16,10 @@ agent_timeout_sec = 1800
 # 各 agent 的呼叫方式。{prompt} 會被替換成提示內容。
 # 指令旗標可能隨版本變動，若執行失敗請以 `claude --help`、`gemini --help` 為準。
 [agents.claude]
-cmd = ["claude", "-p", "{prompt}", "--permission-mode", "acceptEdits",
-       "--allowedTools", "Read,Edit,Write,Glob,Grep,Bash"]
+# 2026-11-08 省額度：只載入 6 個工具、不載入 MCP 與 skill（固定 context 約 31k → 14k token）；JSON 輸出讓日誌留下成本
+cmd = ["claude", "-p", "{prompt}", "--permission-mode", "acceptEdits", "--output-format", "json",
+       "--tools", "Read,Edit,Write,Glob,Grep,Bash", "--allowedTools", "Read,Edit,Write,Glob,Grep,Bash",
+       "--strict-mcp-config", "--disable-slash-commands"]
 
 [agents.gemini]
 # 2026-10-21 停用：Gemini CLI 已不支援個人 Google 帳號登入，改由 Antigravity 接手 critic／reviewer
@@ -30,6 +32,16 @@ cmd = []
 # 若要改成在 IDE 內手動觸發（例如需要瀏覽器驗收），設 manual = true。
 manual = false
 cmd = ["agy", "-p", "{prompt}", "--mode", "accept-edits", "--print-timeout", "30m"]
+
+[agents.antigravity_sonnet]
+# 2026-11-08：同一個 agy，用 Claude Sonnet 5.5 審查 agy 寫的任務（吃 agy 的額度，不是 Claude Code 的）
+manual = false
+cmd = ["agy", "-p", "{prompt}", "--mode", "accept-edits", "--model", "claude-sonnet-5-5-high", "--print-timeout", "30m"]
+
+[agents.antigravity_flash]
+# 2026-11-08：同一個 agy，用 Flash（agy 裡額度最多的模型）：只改文件的任務
+manual = false
+cmd = ["agy", "-p", "{prompt}", "--mode", "accept-edits", "--model", "gemini-3.8-flash-high", "--print-timeout", "30m"]
 
 [agents.antigravity_ide]
 # 同一個 Antigravity，但在 IDE 內由你手動觸發 workflow：需要開瀏覽器、跑指令的瀏覽器驗收用這個。
@@ -44,9 +56,10 @@ fixer = "claude"            # 驗收失敗時，修正任務的預設 owner
 
 # 交叉審查：誰寫的程式由誰審
 [roles.reviewer_for]
-claude = "claude"
+claude = "antigravity"             # 2026-11-08：原本是 Claude 審自己，改由 agy 交叉審查（也省 Claude 額度）
 gemini = "claude"
-antigravity = "claude"
+antigravity = "antigravity_sonnet"  # 2026-11-08：agy 寫的任務改由 agy 裡的 Sonnet 審（不花 Claude Code 額度）
+antigravity_flash = "antigravity"   # Flash 寫的文件由 agy 預設模型審
 
 [tests]
 command = ""          # 自動測試指令，例如 "npm test"、"pytest -q"；留空則跳過

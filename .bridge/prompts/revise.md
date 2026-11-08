@@ -1,6 +1,8 @@
 <!-- bridge:revise -->
 你是 planner。另一個 AI 審查了你的計畫，意見在 {{review_file}}。
 
+只讀審查意見和它點到的檔案（PLAN、相關任務檔），不要重新通讀整個專案。
+
 逐條處理：
 - 同意的：修改 .bridge/PLAN.md 與 .bridge/tasks/ 下的任務檔。
 - 不同意的：在 .bridge/DECISIONS.md 記一條，說明為什麼保留原案。
