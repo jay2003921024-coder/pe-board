@@ -5,6 +5,13 @@ import { PAGE_SIZE, toSharedRecord, sharedContent, fromSharedRecord, toMineRecor
 
 const OP_TIMEOUT = 15000;
 
+// AC-27：讀取一律向伺服器查詢。一般的 getDocs／getDoc 在 Firestore 進入離線模式後不會拋錯，
+// 而是回傳本地快取（常常是空的），共享區就會誤顯示「還沒有任何範本」、我的範本會被當成空的。
+// *FromServer 離線時會拋 unavailable，交給 toCloudFailure 轉成 { offline: true }。
+// 測試 mock 沒有 *FromServer 時退回一般版本。
+const readDocs = (fs, q) => (fs.getDocsFromServer || fs.getDocs)(q);
+const readDoc = (fs, ref) => (fs.getDocFromServer || fs.getDoc)(ref);
+
 // getFb 回傳 { db, fs }（fs 為 firestore 模組）或 null；測試時可直接注入 emulator 的實例。
 export function createCloud(getFb, timeout = OP_TIMEOUT) {
   async function run(fn) {
@@ -29,7 +36,7 @@ export function createCloud(getFb, timeout = OP_TIMEOUT) {
       parts.push(fs.orderBy('createdAt', 'desc'));
       if (after) parts.push(fs.startAfter(after));
       parts.push(fs.limit(limit));
-      const snap = await fs.getDocs(fs.query(fs.collection(db, 'shared'), ...parts));
+      const snap = await readDocs(fs, fs.query(fs.collection(db, 'shared'), ...parts));
       return {
         items: snap.docs.map(d => fromSharedRecord({ id: d.id, ...d.data() })).filter(Boolean),
         cursor: snap.docs.at(-1) || null,
@@ -54,7 +61,7 @@ export function createCloud(getFb, timeout = OP_TIMEOUT) {
 
     // 回傳 { mine, folders }。
     listMine: uid => run(async (db, fs) => {
-      const [snap, meta] = await Promise.all([fs.getDocs(fs.collection(db, 'users', uid, 'templates')), fs.getDoc(fs.doc(db, 'users', uid))]);
+      const [snap, meta] = await Promise.all([readDocs(fs, fs.collection(db, 'users', uid, 'templates')), readDoc(fs, fs.doc(db, 'users', uid))]);
       const folders = meta.exists() && Array.isArray(meta.data().folders) ? meta.data().folders : [];
       return { mine: snap.docs.map(d => fromMineRecord({ id: d.id, ...d.data() })).filter(Boolean), folders };
     }),

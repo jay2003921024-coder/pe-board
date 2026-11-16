@@ -97,7 +97,6 @@ export function renderBoard() {
   board.innerHTML = boardContent(doc.court, step(), doc.iconScale, true, ui.touch ? TOUCH_PAD : 1) + overlay();
   board.classList.toggle('placing', ui.tool !== 'select');
   updateGestureClass();
-  if (board) { const w = board.getBoundingClientRect().width; if (w) lastBoardW = w; }
 }
 
 let lastBoardW = 0;

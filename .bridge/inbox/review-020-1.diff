@@ -1,0 +1,121 @@
+diff --git a/css/layout.css b/css/layout.css
+index c369438..9e394c3 100644
+--- a/css/layout.css
++++ b/css/layout.css
+@@ -57,7 +57,7 @@
+ .icon-btn:disabled{opacity:.35;cursor:default}
+ .icon-btn svg{width:18px;height:18px}
+ .canvas-wrap{background:var(--stage);border-radius:12px;padding:10px;display:flex;justify-content:center}
+-#board{display:block;width:100%;height:auto;max-height:74vh;touch-action:none;user-select:none;-webkit-user-select:none;border-radius:6px}
++#board{display:block;width:100%;height:auto;max-height:74vh;user-select:none;-webkit-user-select:none;border-radius:6px}
+ #board.placing{cursor:crosshair}
+ #board .it,#board [data-id]{cursor:move}
+ #board.placing [data-id]{cursor:crosshair}
+diff --git a/js/store/cloud.js b/js/store/cloud.js
+index 6cd8cb4..6e3b63c 100644
+--- a/js/store/cloud.js
++++ b/js/store/cloud.js
+@@ -5,6 +5,13 @@ import { PAGE_SIZE, toSharedRecord, sharedContent, fromSharedRecord, toMineRecor
+ 
+ const OP_TIMEOUT = 15000;
+ 
++// AC-27：讀取一律向伺服器查詢。一般的 getDocs／getDoc 在 Firestore 進入離線模式後不會拋錯，
++// 而是回傳本地快取（常常是空的），共享區就會誤顯示「還沒有任何範本」、我的範本會被當成空的。
++// *FromServer 離線時會拋 unavailable，交給 toCloudFailure 轉成 { offline: true }。
++// 測試 mock 沒有 *FromServer 時退回一般版本。
++const readDocs = (fs, q) => (fs.getDocsFromServer || fs.getDocs)(q);
++const readDoc = (fs, ref) => (fs.getDocFromServer || fs.getDoc)(ref);
++
+ // getFb 回傳 { db, fs }（fs 為 firestore 模組）或 null；測試時可直接注入 emulator 的實例。
+ export function createCloud(getFb, timeout = OP_TIMEOUT) {
+   async function run(fn) {
+@@ -29,7 +36,7 @@ export function createCloud(getFb, timeout = OP_TIMEOUT) {
+       parts.push(fs.orderBy('createdAt', 'desc'));
+       if (after) parts.push(fs.startAfter(after));
+       parts.push(fs.limit(limit));
+-      const snap = await fs.getDocs(fs.query(fs.collection(db, 'shared'), ...parts));
++      const snap = await readDocs(fs, fs.query(fs.collection(db, 'shared'), ...parts));
+       return {
+         items: snap.docs.map(d => fromSharedRecord({ id: d.id, ...d.data() })).filter(Boolean),
+         cursor: snap.docs.at(-1) || null,
+@@ -54,7 +61,7 @@ export function createCloud(getFb, timeout = OP_TIMEOUT) {
+ 
+     // 回傳 { mine, folders }。
+     listMine: uid => run(async (db, fs) => {
+-      const [snap, meta] = await Promise.all([fs.getDocs(fs.collection(db, 'users', uid, 'templates')), fs.getDoc(fs.doc(db, 'users', uid))]);
++      const [snap, meta] = await Promise.all([readDocs(fs, fs.collection(db, 'users', uid, 'templates')), readDoc(fs, fs.doc(db, 'users', uid))]);
+       const folders = meta.exists() && Array.isArray(meta.data().folders) ? meta.data().folders : [];
+       return { mine: snap.docs.map(d => fromMineRecord({ id: d.id, ...d.data() })).filter(Boolean), folders };
+     }),
+diff --git a/js/ui/board.js b/js/ui/board.js
+index d44ed50..5ea34b9 100644
+--- a/js/ui/board.js
++++ b/js/ui/board.js
+@@ -97,7 +97,6 @@ export function renderBoard() {
+   board.innerHTML = boardContent(doc.court, step(), doc.iconScale, true, ui.touch ? TOUCH_PAD : 1) + overlay();
+   board.classList.toggle('placing', ui.tool !== 'select');
+   updateGestureClass();
+-  if (board) { const w = board.getBoundingClientRect().width; if (w) lastBoardW = w; }
+ }
+ 
+ let lastBoardW = 0;
+diff --git a/js/ui/editor.js b/js/ui/editor.js
+index d60cbd3..862abde 100644
+--- a/js/ui/editor.js
++++ b/js/ui/editor.js
+@@ -46,7 +46,7 @@ function trackVelocity(drag, dx, dy) {
+   drag.lastMoveAt = now;
+ }
+ 
+-// apply(dx, dy)：跟 panMove 呼叫 panBy/scrollBy 時同一套「位移」語意（由呼叫端自行取負號套用）。
++// apply(dx, dy)：跟 panMove 呼叫 panBy 時同一套「位移」語意（由呼叫端自行取負號套用）。
+ function startInertia(vx, vy, apply) {
+   stopInertia();
+   const v0 = Math.hypot(vx, vy);
+@@ -84,8 +84,11 @@ function startInertiaFromDrag(drag) {
+   startInertia(vx, vy, inertiaApplyField);
+ }
+ 
++// 019：pointerdown 比 touchstart 先派發，按到物件時 onPointerDown 已經 renderBoard() 換掉節點，
++// touchstart 冒泡不到 #board，所以 touchstart 也要掛在命中節點上，否則擋不住原生捲動（AC-15）。
+ function bindTouchTarget(e) {
+   if (e.pointerType !== 'touch' || !e.target || e.target === board) return;
++  e.target.addEventListener('touchstart', onTouchStart, { passive: false });
+   e.target.addEventListener('touchmove', onTouchMove, { passive: false });
+   touchTargets.set(e.pointerId, e.target);
+ }
+@@ -93,7 +96,10 @@ function bindTouchTarget(e) {
+ function unbindTouchTarget(e) {
+   if (!e) return;
+   const t = touchTargets.get(e.pointerId);
+-  if (t) { t.removeEventListener('touchmove', onTouchMove); touchTargets.delete(e.pointerId); }
++  if (!t) return;
++  t.removeEventListener('touchstart', onTouchStart);
++  t.removeEventListener('touchmove', onTouchMove);
++  touchTargets.delete(e.pointerId);
+ }
+ 
+ function bounds() { return { w: W, h: courtH(state.doc.court) }; }
+diff --git a/tests/unit/firebase.test.js b/tests/unit/firebase.test.js
+index 6b5b959..edc4ce2 100644
+--- a/tests/unit/firebase.test.js
++++ b/tests/unit/firebase.test.js
+@@ -73,6 +73,18 @@ test('存取層：Firestore 操作逾時或拋錯都轉成結果物件', async (
+   assert.deepEqual(await broken.deleteMine('u', 'x'), { offline: true });
+ });
+ 
++test('AC-27：SDK 已載入後離線，讀取不吃本地空快取，回 offline', async () => {
++  // 模擬 Firestore 離線模式：getDocs／getDoc 以空快取 resolve，*FromServer 拋 unavailable。
++  const unavailable = async () => { throw { code: 'unavailable' }; };
++  const empty = async () => ({ docs: [], exists: () => false, data: () => ({}) });
++  const fs = { collection: () => ({}), doc: () => ({}), where: () => ({}), orderBy: () => ({}), limit: () => ({}), query: () => ({}),
++    getDocs: empty, getDoc: empty, getDocsFromServer: unavailable, getDocFromServer: unavailable };
++  const cloud = createCloud(async () => ({ db: {}, fs }));
++  assert.deepEqual(await cloud.listShared(), { offline: true });
++  assert.deepEqual(await cloud.listShared({ court: 'basketball' }), { offline: true });
++  assert.deepEqual(await cloud.listMine('u1'), { offline: true });
++});
++
+ test('正常載入：一律呼叫 getRedirectResult；使用者資訊含管理員判斷（需 email 已驗證）', async () => {
+   const sdk = fakeSdk({ authUser: { uid: 'u1', displayName: '王老師', email: ADMIN_EMAILS[0], emailVerified: true } });
+   _resetForTest({ config: CONFIG, load: sdk.load, storage: memStorage });

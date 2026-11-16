@@ -73,6 +73,18 @@ test('存取層：Firestore 操作逾時或拋錯都轉成結果物件', async (
   assert.deepEqual(await broken.deleteMine('u', 'x'), { offline: true });
 });
 
+test('AC-27：SDK 已載入後離線，讀取不吃本地空快取，回 offline', async () => {
+  // 模擬 Firestore 離線模式：getDocs／getDoc 以空快取 resolve，*FromServer 拋 unavailable。
+  const unavailable = async () => { throw { code: 'unavailable' }; };
+  const empty = async () => ({ docs: [], exists: () => false, data: () => ({}) });
+  const fs = { collection: () => ({}), doc: () => ({}), where: () => ({}), orderBy: () => ({}), limit: () => ({}), query: () => ({}),
+    getDocs: empty, getDoc: empty, getDocsFromServer: unavailable, getDocFromServer: unavailable };
+  const cloud = createCloud(async () => ({ db: {}, fs }));
+  assert.deepEqual(await cloud.listShared(), { offline: true });
+  assert.deepEqual(await cloud.listShared({ court: 'basketball' }), { offline: true });
+  assert.deepEqual(await cloud.listMine('u1'), { offline: true });
+});
+
 test('正常載入：一律呼叫 getRedirectResult；使用者資訊含管理員判斷（需 email 已驗證）', async () => {
   const sdk = fakeSdk({ authUser: { uid: 'u1', displayName: '王老師', email: ADMIN_EMAILS[0], emailVerified: true } });
   _resetForTest({ config: CONFIG, load: sdk.load, storage: memStorage });

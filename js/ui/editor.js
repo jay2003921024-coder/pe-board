@@ -46,7 +46,7 @@ function trackVelocity(drag, dx, dy) {
   drag.lastMoveAt = now;
 }
 
-// apply(dx, dy)：跟 panMove 呼叫 panBy/scrollBy 時同一套「位移」語意（由呼叫端自行取負號套用）。
+// apply(dx, dy)：跟 panMove 呼叫 panBy 時同一套「位移」語意（由呼叫端自行取負號套用）。
 function startInertia(vx, vy, apply) {
   stopInertia();
   const v0 = Math.hypot(vx, vy);
@@ -84,8 +84,11 @@ function startInertiaFromDrag(drag) {
   startInertia(vx, vy, inertiaApplyField);
 }
 
+// 019：pointerdown 比 touchstart 先派發，按到物件時 onPointerDown 已經 renderBoard() 換掉節點，
+// touchstart 冒泡不到 #board，所以 touchstart 也要掛在命中節點上，否則擋不住原生捲動（AC-15）。
 function bindTouchTarget(e) {
   if (e.pointerType !== 'touch' || !e.target || e.target === board) return;
+  e.target.addEventListener('touchstart', onTouchStart, { passive: false });
   e.target.addEventListener('touchmove', onTouchMove, { passive: false });
   touchTargets.set(e.pointerId, e.target);
 }
@@ -93,7 +96,10 @@ function bindTouchTarget(e) {
 function unbindTouchTarget(e) {
   if (!e) return;
   const t = touchTargets.get(e.pointerId);
-  if (t) { t.removeEventListener('touchmove', onTouchMove); touchTargets.delete(e.pointerId); }
+  if (!t) return;
+  t.removeEventListener('touchstart', onTouchStart);
+  t.removeEventListener('touchmove', onTouchMove);
+  touchTargets.delete(e.pointerId);
 }
 
 function bounds() { return { w: W, h: courtH(state.doc.court) }; }
