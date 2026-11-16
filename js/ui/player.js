@@ -56,6 +56,7 @@ function startAnim() {
   const start = doc.cur >= doc.steps.length - 1 ? 0 : doc.cur;
   state.anim = { start, t0: performance.now(), plans: {} };
   board.classList.add('animating');
+  hooks.renderView();
   const pb = $('#btnPlay'); pb.textContent = '■ 停止'; pb.setAttribute('aria-pressed', 'true');
   $('#hint').textContent = '播放中：人和球會沿著上一步畫的箭頭移動。點畫面或按「停止」結束。';
   state.anim.raf = requestAnimationFrame(animFrame);

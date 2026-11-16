@@ -403,6 +403,20 @@ class Bridge:
                 finished, finalize_headless, owner=owner, task_file=self.rel(path),
                 previous_review=self.rel(reviews[-1]) if reviews else "（無）")
 
+    def write_review_diff(self, tid: str, n: int) -> Path:
+        """把工作目錄相對 HEAD 的改動（不含 .bridge/）存成檔案，reviewer 不必自己跑 git。
+
+        headless agy 只要有一個指令沒在白名單裡就會被自動拒絕、整次空手結束，所以 diff 由 orchestrator 先準備好。
+        """
+        out = self.dir / "inbox" / f"review-{tid}-{n}.diff"
+        out.parent.mkdir(exist_ok=True)
+        git = lambda *a: subprocess.run(["git", *a], cwd=self.root, capture_output=True, text=True).stdout
+        parts = [git("diff", "HEAD", "--", ".", ":(exclude).bridge")]
+        for f in git("ls-files", "--others", "--exclude-standard", "--", ".", ":(exclude).bridge").splitlines():
+            parts.append(git("diff", "--no-index", "--", "/dev/null", f))
+        out.write_text("".join(parts) or "（沒有改動）\n", encoding="utf-8")
+        return out
+
     def review_task(self, t: dict) -> None:
         path, owner = t["_path"], t.get("owner", "claude")
         reviewer = t.get("reviewer") or self.cfg.get("roles", {}).get("reviewer_for", {}).get(owner)
@@ -412,9 +426,10 @@ class Bridge:
             self.log(f"任務 {t['id']} 沒有指定 reviewer，直接標為完成")
             return
         review_file = self.dir / "reviews" / f"{t['id']}-r{attempt + 1}.md"
+        diff_file = self.write_review_diff(t["id"], attempt + 1)
         self.do(f"review-{t['id']}-{attempt + 1}", reviewer, "review", f"審查任務 {t['id']}（{owner} 寫的）",
                 lambda: verdict(review_file) is not None, owner=owner,
-                task_file=self.rel(path), review_file=self.rel(review_file))
+                task_file=self.rel(path), review_file=self.rel(review_file), diff_file=self.rel(diff_file))
 
         if verdict(review_file) == "PASS":
             write_fm(path, "status", "done")

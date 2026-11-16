@@ -1,0 +1,405 @@
+diff --git a/css/touch.css b/css/touch.css
+index f7d8c83..244d4cd 100644
+--- a/css/touch.css
++++ b/css/touch.css
+@@ -3,8 +3,9 @@
+ .touch-bar button{min-width:44px;min-height:44px}
+ .touch-bar #btnTouchMulti[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+ 
+-.canvas-wrap{touch-action:none}
+-#board{-webkit-touch-callout:none}
++.canvas-wrap{touch-action:pan-x pan-y}
++#board{touch-action:pan-x pan-y;-webkit-touch-callout:none;user-select:none;-webkit-user-select:none}
++#board.app-gesture,.canvas-wrap.app-gesture{touch-action:none}
+ 
+ /* 平板／粗指標裝置（AC-14）：所有可點控制項 ≥ 44×44 px，並讓 iPad 橫向（1024×768）與直向（768×1024）工具列與畫布同時完整可見 */
+ @media (pointer:coarse){
+diff --git a/js/ui/board.js b/js/ui/board.js
+index 105595d..d44ed50 100644
+--- a/js/ui/board.js
++++ b/js/ui/board.js
+@@ -3,7 +3,8 @@ import { W, f } from '../core/util.js';
+ import { courtH } from '../core/courts.js';
+ import { isLine, selR, textHalfW } from '../core/items.js';
+ import { qpt, boardContent } from '../core/render.js';
+-import { defaultView } from '../core/viewport.js';
++import { defaultView, zoomLevel } from '../core/viewport.js';
++import { blankIsNative } from '../core/gesture.js';
+ import { $, state, hooks, step, getSel, selIds, selObjs } from './state.js';
+ 
+ let board;
+@@ -66,12 +67,28 @@ export function overlay() {
+   return `<g pointer-events="none">${ring(o, k)}</g>` + out;
+ }
+ 
++export function updateGestureClass() {
++  if (!board) return;
++  const bounds = { w: W, h: courtH(state.doc.court) };
++  const view = state.view || defaultView(bounds);
++  const zoomed = zoomLevel(view, bounds) > 1;
++  const isNative = blankIsNative({
++    tool: state.ui.tool,
++    multi: state.ui.multi,
++    zoomed,
++    animating: Boolean(state.anim),
++  });
++  board.classList.toggle('app-gesture', !isNative);
++  if (board.parentElement) board.parentElement.classList.toggle('app-gesture', !isNative);
++}
++
+ // 只更新 <svg viewBox>，不重寫 board.innerHTML：捲動／平移／慣性滑行期間場地與物件內容
+ // 沒有改變，只有可視範圍改變，不需要銷毀重建整個 SVG DOM（AC-15）。
+ export function renderView() {
+   const bounds = { w: W, h: courtH(state.doc.court) };
+   const view = state.view || defaultView(bounds);
+   board.setAttribute('viewBox', `${f(view.x)} ${f(view.y)} ${f(view.w)} ${f(view.h)}`);
++  updateGestureClass();
+ }
+ 
+ export function renderBoard() {
+@@ -79,11 +96,22 @@ export function renderBoard() {
+   renderView();
+   board.innerHTML = boardContent(doc.court, step(), doc.iconScale, true, ui.touch ? TOUCH_PAD : 1) + overlay();
+   board.classList.toggle('placing', ui.tool !== 'select');
++  updateGestureClass();
++  if (board) { const w = board.getBoundingClientRect().width; if (w) lastBoardW = w; }
+ }
+ 
++let lastBoardW = 0;
+ export function initBoard() {
+   board = $('#board');
++  lastBoardW = board.getBoundingClientRect().width;
+   hooks.renderBoard = renderBoard;
+   hooks.renderView = renderView;
+-  window.addEventListener('resize', () => { if (selIds().length) renderBoard(); });
++  // 019 修正：只有寬度改變才重繪（Safari 網址列伸縮只改高度，不該重繪）
++  window.addEventListener('resize', () => {
++    const w = board.getBoundingClientRect().width;
++    if (w && w !== lastBoardW) {
++      lastBoardW = w;
++      if (selIds().length) renderBoard();
++    }
++  });
+ }
+diff --git a/js/ui/editor.js b/js/ui/editor.js
+index 0a1799d..d60cbd3 100644
+--- a/js/ui/editor.js
++++ b/js/ui/editor.js
+@@ -5,6 +5,7 @@ import { courtH, COURTS } from '../core/courts.js';
+ import { ITEMS, LINES, isLine, clampSize } from '../core/items.js';
+ import { qpt } from '../core/render.js';
+ import { clampView, defaultView, zoomLevel, panBy, clampVelocity, distanceAt, inertiaStopTime } from '../core/viewport.js';
++import { touchOwner } from '../core/gesture.js';
+ import { shiftObj, nextLabel } from '../core/doc.js';
+ import { $, state, hooks, step, getSel, findObj, selIds, selObjs, setSelection, selectOne, clearSel, pushUndo, history, save, updateHistory } from './state.js';
+ 
+@@ -67,26 +68,6 @@ function startInertia(vx, vy, apply) {
+   inertiaFrame = requestAnimationFrame(step);
+ }
+ 
+-// 017 修正：window.scrollBy past 文件邊界時雖然會被瀏覽器夾住（html,body 已設
+-// overscroll-behavior-y:none，不會原生回彈），但慣性動畫仍會繼續以為自己在移動，
+-// 造成放開手指後殘留的慣性像「撞牆又彈回」。改用 scrollTo 夾在 [0, max] 內，
+-// 一旦發現這一幀被夾住（代表已經到底/到頂），立刻停止慣性，不讓它繼續空轉。
+-function scrollMax() {
+-  const doc = document.documentElement;
+-  return {
+-    x: Math.max(0, doc.scrollWidth - window.innerWidth),
+-    y: Math.max(0, doc.scrollHeight - window.innerHeight),
+-  };
+-}
+-
+-function inertiaApplyScroll(dx, dy) {
+-  const max = scrollMax();
+-  const wantX = window.scrollX - dx, wantY = window.scrollY - dy;
+-  const nextX = Math.max(0, Math.min(max.x, wantX));
+-  const nextY = Math.max(0, Math.min(max.y, wantY));
+-  window.scrollTo(nextX, nextY);
+-  if (nextX !== wantX || nextY !== wantY) stopInertia();
+-}
+ function inertiaApplyField(dx, dy) {
+   const bd = bounds();
+   const view = state.view || defaultView(bd);
+@@ -99,16 +80,8 @@ function inertiaApplyField(dx, dy) {
+ function startInertiaFromDrag(drag) {
+   if (!drag || drag.vx === undefined || !drag.lastMoveAt) return;
+   if (performance.now() - drag.lastMoveAt > 80) return;
+-  let vx = clampVelocity(drag.vx), vy = clampVelocity(drag.vy);
+-  if (drag.space === 'client') {
+-    // 放開手指當下若已經在文件邊界、且速度方向是繼續往邊界外衝，這段慣性本來就不會移動
+-    // 任何像素，不啟動它（AC-18 問題三：避免硬推邊界的無效慣性造成撞牆/回彈感）。
+-    const max = scrollMax();
+-    if ((vx < 0 && window.scrollX >= max.x) || (vx > 0 && window.scrollX <= 0)) vx = 0;
+-    if ((vy < 0 && window.scrollY >= max.y) || (vy > 0 && window.scrollY <= 0)) vy = 0;
+-    if (!vx && !vy) return;
+-  }
+-  startInertia(vx, vy, drag.space === 'client' ? inertiaApplyScroll : inertiaApplyField);
++  const vx = clampVelocity(drag.vx), vy = clampVelocity(drag.vy);
++  startInertia(vx, vy, inertiaApplyField);
+ }
+ 
+ function bindTouchTarget(e) {
+@@ -162,8 +135,10 @@ function cancelSingleDrag() {
+ }
+ 
+ function startPinch() {
++  state.pendingTap = null;
+   cancelSingleDrag();
+   state.drag = { kind: 'pinch' };
++  for (const id of pointers.keys()) { try { board.setPointerCapture(id); } catch (err) {} }
+   hooks.renderBoard(); hooks.renderProps();
+ }
+ 
+@@ -219,7 +194,6 @@ function onPointerDown(e) {
+   bindTouchTarget(e);
+   if (state.anim) { hooks.stopAnim(); return; }
+   if (e.pointerType === 'touch') {
+-    try { board.setPointerCapture(e.pointerId); } catch (err) {}
+     pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+     if (pointers.size === 2) { startPinch(); return; }
+     if (pointers.size > 2) return;
+@@ -267,31 +241,29 @@ function onPointerDown(e) {
+   // 空白處用選取工具：開始框選（Shift 或多選模式保留目前的選取）。
+   const base = multi ? selIds() : [];
+   const hadSel = selIds().length > 0;
+-  if (!multi) clearSel();
+-  // 觸控且非多選模式：不框選，單指拖曳＝捲動或平移畫面（014 修正：自己接管這個手勢，不再依賴
+-  // 瀏覽器原生捲動，避免「先放行捲動、兩指落下才切換成縮放」時與原生捲動手勢互相搶奪造成亂跑／
+-  // 跳動；放大時平移畫布，沒放大時捲動整個頁面，上下左右都會回應）。
+-  // 016 修正：原本無條件呼叫 renderBoard() 會重寫整個 board.innerHTML，讓手指剛按下的
+-  // e.target 在手勢啟動瞬間脫離 DOM（AC-15）。沒有選取物件、且觸控狀態沒有切換時不需要
+-  // 重繪（overlay 沒有東西要清，placing class 也沒變），略過即可。
++  // 019 修正：觸控且非多選模式：
++  // - 已放大：建立 kind: 'pan'，平移畫布（drag.space = 'field'）
++  // - 未放大：交給瀏覽器原生捲動，不建立 drag、不呼叫 renderBoard()，記下 pendingTap
+   if (state.ui.touch && !multi) {
+-    state.drag = { kind: 'pan', last: { x: e.clientX, y: e.clientY } };
+-    if (hadSel || prevTouch !== state.ui.touch) { hooks.renderBoard(); hooks.renderProps(); }
++    const bd = bounds();
++    const view = state.view || defaultView(bd);
++    if (zoomLevel(view, bd) > 1) {
++      if (!multi) clearSel();
++      state.drag = { kind: 'pan', last: { x: e.clientX, y: e.clientY } };
++      if (hadSel || prevTouch !== state.ui.touch) { hooks.renderBoard(); hooks.renderProps(); }
++      return;
++    }
++    try { board.releasePointerCapture(e.pointerId); } catch (err) {}
++    state.pendingTap = { id: e.pointerId, x: e.clientX, y: e.clientY, hadSel };
+     return;
+   }
++  if (!multi) clearSel();
+   state.drag = { kind: 'box', start: p, cur: p, base };
+   hooks.renderBoard(); hooks.renderProps();
+ }
+ 
+-// 單指在空白處拖曳（選取工具、非多選模式）：放大時平移畫布，內容跟著手指；
+-// 沒放大時捲動整個頁面。用 getScreenCTM() 的縮放係數換算 client px → 場地單位的位移量，
+-// 不用換算座標點（跟 ptRaw 不同，這裡只需要「位移」，不需要「位置」）。
+-// 017 修正：手指按住不動時，電容式觸控面板仍會回報 1~2px 的微噪訊 pointermove，若照單
+-// 全收呼叫 scrollBy/panBy，每一點點位移都會讓 #board 的 100vh 相關尺寸或 viewBox 重算，
+-// 長按時這些微噪訊會被誤認成「正在捲動」而連續觸發（AC-15 問題一、二）。在手勢確認前
+-// （drag.confirmed 為 false）先把位移累積在 drag.accX/accY，直到累積距離超過 8px
+-// 才視為真的開始捲動／平移；確認後一律套用累積到的位移，不再重新計算門檻，之後每一幀
+-// 照常即時套用，不影響慢速但持續的滑動（AC-15 問題二的跟手度）。
++// 單指在空白處拖曳（選取工具、非多選模式、已放大）：平移畫布，內容跟著手指。
++// 017 修正：手指按住不動時的微噪訊 pointermove 先在 drag.accX/accY 累積滿 8px 才啟動平移。
+ function panMove(e, drag) {
+   let dxClient = e.clientX - drag.last.x, dyClient = e.clientY - drag.last.y;
+   drag.last = { x: e.clientX, y: e.clientY };
+@@ -312,13 +284,15 @@ function panMove(e, drag) {
+     state.view = panBy(view, -dx, -dy, bd);
+     hooks.renderView();
+     trackVelocity(drag, dx, dy); drag.space = 'field';
+-  } else {
+-    window.scrollBy(-dxClient, -dyClient);
+-    trackVelocity(drag, dxClient, dyClient); drag.space = 'client';
+   }
+ }
+ 
+ function onPointerMove(e) {
++  if (state.pendingTap && state.pendingTap.id === e.pointerId) {
++    if (Math.hypot(e.clientX - state.pendingTap.x, e.clientY - state.pendingTap.y) >= 8) {
++      state.pendingTap = null;
++    }
++  }
+   if (pointers.has(e.pointerId)) {
+     pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+     if (state.drag && state.drag.kind === 'pinch') { pinchMove(); return; }
+@@ -353,6 +327,13 @@ function onPointerMove(e) {
+ 
+ function endDrag(e) {
+   unbindTouchTarget(e);
++  if (state.pendingTap && e && state.pendingTap.id === e.pointerId) {
++    const tap = state.pendingTap;
++    state.pendingTap = null;
++    if (e.type === 'pointerup' && Math.hypot(e.clientX - tap.x, e.clientY - tap.y) < 8) {
++      clearSel(); hooks.renderBoard(); hooks.renderProps();
++    }
++  }
+   if (e && pointers.has(e.pointerId)) {
+     pointers.delete(e.pointerId);
+     if (state.drag && state.drag.kind === 'pinch') {
+@@ -373,15 +354,33 @@ function endDrag(e) {
+   save();
+ }
+ 
+-// CSS 的 touch-action 設為 none（見 css/touch.css），畫布範圍內一律自己接管捲動／縮放
+-// （014：不讓瀏覽器原生捲動參與決策，避免它跟兩指縮放互搶造成畫面亂跑／跳動）；
+-// 單指在空白處拖曳時 state.drag.kind 是 'pan'，一樣要擋掉原生行為，捲動／平移由 panMove() 處理。
++// 019 修正：手指按下的那一刻決定手勢交給誰。'app' 擋掉原生行為；'native' 交給瀏覽器原生捲動。
++function onTouchStart(e) {
++  const bd = bounds();
++  const view = state.view || defaultView(bd);
++  const zoomed = zoomLevel(view, bd) > 1;
++  const onTarget = Boolean(e.target && e.target.closest && e.target.closest('[data-id],[data-handle]'));
++  const owner = touchOwner({
++    tool: state.ui.tool,
++    multi: state.ui.multi,
++    zoomed,
++    onTarget,
++    touchCount: e.touches ? e.touches.length : 1,
++    animating: Boolean(state.anim),
++  });
++  if (owner === 'app') {
++    e.preventDefault();
++  }
++}
++
++// 單指在空白處拖曳（已放大）：state.drag.kind 是 'pan'，擋掉原生行為，平移由 panMove() 處理。
+ function onTouchMove(e) {
+   if (state.drag) e.preventDefault();
+ }
+ 
+ export function initEditor() {
+   board = $('#board');
++  board.addEventListener('touchstart', onTouchStart, { passive: false });
+   board.addEventListener('pointerdown', onPointerDown);
+   board.addEventListener('pointermove', onPointerMove);
+   board.addEventListener('pointerup', endDrag);
+diff --git a/js/ui/player.js b/js/ui/player.js
+index a130de8..38e34f4 100644
+--- a/js/ui/player.js
++++ b/js/ui/player.js
+@@ -56,6 +56,7 @@ function startAnim() {
+   const start = doc.cur >= doc.steps.length - 1 ? 0 : doc.cur;
+   state.anim = { start, t0: performance.now(), plans: {} };
+   board.classList.add('animating');
++  hooks.renderView();
+   const pb = $('#btnPlay'); pb.textContent = '■ 停止'; pb.setAttribute('aria-pressed', 'true');
+   $('#hint').textContent = '播放中：人和球會沿著上一步畫的箭頭移動。點畫面或按「停止」結束。';
+   state.anim.raf = requestAnimationFrame(animFrame);
+diff --git a/js/ui/state.js b/js/ui/state.js
+index cc401b3..fc8d2c5 100644
+--- a/js/ui/state.js
++++ b/js/ui/state.js
+@@ -13,6 +13,8 @@ export const state = {
+   anim: null,
+   // 005：目前畫布的縮放／平移（viewBox），null＝原尺寸（見 core/viewport.js）。
+   view: null,
++  // 019：未放大時點空白處待確認的點擊（若是捲動則取消，抬起手指位移 < 8px 則取消選取）。
++  pendingTap: null,
+ };
+ export const history = createHistory({ limit: 80 });
+ 
+diff --git a/js/ui/touch.js b/js/ui/touch.js
+index c9d2dfe..4d81d52 100644
+--- a/js/ui/touch.js
++++ b/js/ui/touch.js
+@@ -18,7 +18,7 @@ function initTouchBar() {
+     const b = e.target.closest('button'); if (!b) return;
+     if (b.id === 'btnTouchDup') hooks.dupSel();
+     else if (b.id === 'btnTouchDel') hooks.deleteSel();
+-    else if (b.id === 'btnTouchMulti') { state.ui.multi = !state.ui.multi; renderTouchBar(); }
++    else if (b.id === 'btnTouchMulti') { state.ui.multi = !state.ui.multi; renderTouchBar(); hooks.renderBoard(); }
+     else if (b.id === 'btnTouchZoomReset') resetView();
+   });
+ }
+diff --git a/js/core/gesture.js b/js/core/gesture.js
+new file mode 100644
+index 0000000..b9bdc7d
+--- /dev/null
++++ b/js/core/gesture.js
+@@ -0,0 +1,20 @@
++// 手勢判定純函式（不碰 DOM，只依狀態與手勢特徵決定手勢歸屬）。
++// AC-15、AC-18：手勢在按下那一刻決定交給誰，之後不再轉手。
++
++export function touchOwner({ tool, multi, zoomed, onTarget, touchCount = 1, animating = false } = {}) {
++  if (touchCount >= 2) return 'app';
++  if (animating) return 'app';
++  if (onTarget) return 'app';
++  if (tool !== 'select') return 'app';
++  if (multi) return 'app';
++  if (zoomed) return 'app';
++  return 'native';
++}
++
++export function blankIsNative({ tool, multi, zoomed, animating = false } = {}) {
++  if (animating) return false;
++  if (tool !== 'select') return false;
++  if (multi) return false;
++  if (zoomed) return false;
++  return true;
++}
+diff --git a/tests/unit/gesture.test.js b/tests/unit/gesture.test.js
+new file mode 100644
+index 0000000..e1fe2b9
+--- /dev/null
++++ b/tests/unit/gesture.test.js
+@@ -0,0 +1,57 @@
++// AC-15、AC-18：手勢判定純函式測試。
++import { test } from 'node:test';
++import assert from 'node:assert/strict';
++import { touchOwner, blankIsNative } from '../../js/core/gesture.js';
++
++test('touchOwner：touchCount >= 2（第二指落下）→ app', () => {
++  assert.equal(touchOwner({ tool: 'select', multi: false, zoomed: false, onTarget: false, touchCount: 2 }), 'app');
++  assert.equal(touchOwner({ tool: 'select', multi: false, zoomed: false, onTarget: false, touchCount: 3 }), 'app');
++});
++
++test('touchOwner：animating（正在播放動畫，按下＝停止播放）→ app', () => {
++  assert.equal(touchOwner({ tool: 'select', multi: false, zoomed: false, onTarget: false, touchCount: 1, animating: true }), 'app');
++});
++
++test('touchOwner：onTarget（按到物件或把手）→ app', () => {
++  assert.equal(touchOwner({ tool: 'select', multi: false, zoomed: false, onTarget: true, touchCount: 1 }), 'app');
++});
++
++test('touchOwner：tool !== select（任何放置／畫線工具）→ app', () => {
++  assert.equal(touchOwner({ tool: 'player', multi: false, zoomed: false, onTarget: false, touchCount: 1 }), 'app');
++  assert.equal(touchOwner({ tool: 'cone', multi: false, zoomed: false, onTarget: false, touchCount: 1 }), 'app');
++  assert.equal(touchOwner({ tool: 'line-pass', multi: false, zoomed: false, onTarget: false, touchCount: 1 }), 'app');
++  assert.equal(touchOwner({ tool: 'zone', multi: false, zoomed: false, onTarget: false, touchCount: 1 }), 'app');
++});
++
++test('touchOwner：multi（多選模式，空白處拖曳＝框選）→ app', () => {
++  assert.equal(touchOwner({ tool: 'select', multi: true, zoomed: false, onTarget: false, touchCount: 1 }), 'app');
++});
++
++test('touchOwner：zoomed（畫布已放大，空白處拖曳＝平移畫布）→ app', () => {
++  assert.equal(touchOwner({ tool: 'select', multi: false, zoomed: true, onTarget: false, touchCount: 1 }), 'app');
++});
++
++test('touchOwner：選取工具＋空白處＋未放大 → native', () => {
++  assert.equal(touchOwner({ tool: 'select', multi: false, zoomed: false, onTarget: false, touchCount: 1, animating: false }), 'native');
++});
++
++test('touchOwner：優先順序符合契約定義', () => {
++  // 第二指落下優先於選取工具、空白處、未放大
++  assert.equal(touchOwner({ tool: 'select', multi: false, zoomed: false, onTarget: false, touchCount: 2, animating: false }), 'app');
++  // 正在播放動畫優先於選取工具、空白處、未放大
++  assert.equal(touchOwner({ tool: 'select', multi: false, zoomed: false, onTarget: false, touchCount: 1, animating: true }), 'app');
++  // 按在物件上優先於選取工具、未放大
++  assert.equal(touchOwner({ tool: 'select', multi: false, zoomed: false, onTarget: true, touchCount: 1, animating: false }), 'app');
++  // 放置工具優先於非多選、未放大
++  assert.equal(touchOwner({ tool: 'ball', multi: false, zoomed: false, onTarget: false, touchCount: 1, animating: false }), 'app');
++  // 多選模式優先於未放大
++  assert.equal(touchOwner({ tool: 'select', multi: true, zoomed: false, onTarget: false, touchCount: 1, animating: false }), 'app');
++});
++
++test('blankIsNative：判斷按在空白處時是否交給瀏覽器原生捲動', () => {
++  assert.equal(blankIsNative({ tool: 'select', multi: false, zoomed: false, animating: false }), true);
++  assert.equal(blankIsNative({ tool: 'player', multi: false, zoomed: false, animating: false }), false);
++  assert.equal(blankIsNative({ tool: 'select', multi: true, zoomed: false, animating: false }), false);
++  assert.equal(blankIsNative({ tool: 'select', multi: false, zoomed: true, animating: false }), false);
++  assert.equal(blankIsNative({ tool: 'select', multi: false, zoomed: false, animating: true }), false);
++});

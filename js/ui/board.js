@@ -3,7 +3,8 @@ import { W, f } from '../core/util.js';
 import { courtH } from '../core/courts.js';
 import { isLine, selR, textHalfW } from '../core/items.js';
 import { qpt, boardContent } from '../core/render.js';
-import { defaultView } from '../core/viewport.js';
+import { defaultView, zoomLevel } from '../core/viewport.js';
+import { blankIsNative } from '../core/gesture.js';
 import { $, state, hooks, step, getSel, selIds, selObjs } from './state.js';
 
 let board;
@@ -66,12 +67,28 @@ export function overlay() {
   return `<g pointer-events="none">${ring(o, k)}</g>` + out;
 }
 
+export function updateGestureClass() {
+  if (!board) return;
+  const bounds = { w: W, h: courtH(state.doc.court) };
+  const view = state.view || defaultView(bounds);
+  const zoomed = zoomLevel(view, bounds) > 1;
+  const isNative = blankIsNative({
+    tool: state.ui.tool,
+    multi: state.ui.multi,
+    zoomed,
+    animating: Boolean(state.anim),
+  });
+  board.classList.toggle('app-gesture', !isNative);
+  if (board.parentElement) board.parentElement.classList.toggle('app-gesture', !isNative);
+}
+
 // 只更新 <svg viewBox>，不重寫 board.innerHTML：捲動／平移／慣性滑行期間場地與物件內容
 // 沒有改變，只有可視範圍改變，不需要銷毀重建整個 SVG DOM（AC-15）。
 export function renderView() {
   const bounds = { w: W, h: courtH(state.doc.court) };
   const view = state.view || defaultView(bounds);
   board.setAttribute('viewBox', `${f(view.x)} ${f(view.y)} ${f(view.w)} ${f(view.h)}`);
+  updateGestureClass();
 }
 
 export function renderBoard() {
@@ -79,11 +96,22 @@ export function renderBoard() {
   renderView();
   board.innerHTML = boardContent(doc.court, step(), doc.iconScale, true, ui.touch ? TOUCH_PAD : 1) + overlay();
   board.classList.toggle('placing', ui.tool !== 'select');
+  updateGestureClass();
+  if (board) { const w = board.getBoundingClientRect().width; if (w) lastBoardW = w; }
 }
 
+let lastBoardW = 0;
 export function initBoard() {
   board = $('#board');
+  lastBoardW = board.getBoundingClientRect().width;
   hooks.renderBoard = renderBoard;
   hooks.renderView = renderView;
-  window.addEventListener('resize', () => { if (selIds().length) renderBoard(); });
+  // 019 修正：只有寬度改變才重繪（Safari 網址列伸縮只改高度，不該重繪）
+  window.addEventListener('resize', () => {
+    const w = board.getBoundingClientRect().width;
+    if (w && w !== lastBoardW) {
+      lastBoardW = w;
+      if (selIds().length) renderBoard();
+    }
+  });
 }

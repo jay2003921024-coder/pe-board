@@ -18,7 +18,7 @@ function initTouchBar() {
     const b = e.target.closest('button'); if (!b) return;
     if (b.id === 'btnTouchDup') hooks.dupSel();
     else if (b.id === 'btnTouchDel') hooks.deleteSel();
-    else if (b.id === 'btnTouchMulti') { state.ui.multi = !state.ui.multi; renderTouchBar(); }
+    else if (b.id === 'btnTouchMulti') { state.ui.multi = !state.ui.multi; renderTouchBar(); hooks.renderBoard(); }
     else if (b.id === 'btnTouchZoomReset') resetView();
   });
 }

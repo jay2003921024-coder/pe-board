@@ -5,6 +5,7 @@ import { courtH, COURTS } from '../core/courts.js';
 import { ITEMS, LINES, isLine, clampSize } from '../core/items.js';
 import { qpt } from '../core/render.js';
 import { clampView, defaultView, zoomLevel, panBy, clampVelocity, distanceAt, inertiaStopTime } from '../core/viewport.js';
+import { touchOwner } from '../core/gesture.js';
 import { shiftObj, nextLabel } from '../core/doc.js';
 import { $, state, hooks, step, getSel, findObj, selIds, selObjs, setSelection, selectOne, clearSel, pushUndo, history, save, updateHistory } from './state.js';
 
@@ -67,26 +68,6 @@ function startInertia(vx, vy, apply) {
   inertiaFrame = requestAnimationFrame(step);
 }
 
-// 017 修正：window.scrollBy past 文件邊界時雖然會被瀏覽器夾住（html,body 已設
-// overscroll-behavior-y:none，不會原生回彈），但慣性動畫仍會繼續以為自己在移動，
-// 造成放開手指後殘留的慣性像「撞牆又彈回」。改用 scrollTo 夾在 [0, max] 內，
-// 一旦發現這一幀被夾住（代表已經到底/到頂），立刻停止慣性，不讓它繼續空轉。
-function scrollMax() {
-  const doc = document.documentElement;
-  return {
-    x: Math.max(0, doc.scrollWidth - window.innerWidth),
-    y: Math.max(0, doc.scrollHeight - window.innerHeight),
-  };
-}
-
-function inertiaApplyScroll(dx, dy) {
-  const max = scrollMax();
-  const wantX = window.scrollX - dx, wantY = window.scrollY - dy;
-  const nextX = Math.max(0, Math.min(max.x, wantX));
-  const nextY = Math.max(0, Math.min(max.y, wantY));
-  window.scrollTo(nextX, nextY);
-  if (nextX !== wantX || nextY !== wantY) stopInertia();
-}
 function inertiaApplyField(dx, dy) {
   const bd = bounds();
   const view = state.view || defaultView(bd);
@@ -99,16 +80,8 @@ function inertiaApplyField(dx, dy) {
 function startInertiaFromDrag(drag) {
   if (!drag || drag.vx === undefined || !drag.lastMoveAt) return;
   if (performance.now() - drag.lastMoveAt > 80) return;
-  let vx = clampVelocity(drag.vx), vy = clampVelocity(drag.vy);
-  if (drag.space === 'client') {
-    // 放開手指當下若已經在文件邊界、且速度方向是繼續往邊界外衝，這段慣性本來就不會移動
-    // 任何像素，不啟動它（AC-18 問題三：避免硬推邊界的無效慣性造成撞牆/回彈感）。
-    const max = scrollMax();
-    if ((vx < 0 && window.scrollX >= max.x) || (vx > 0 && window.scrollX <= 0)) vx = 0;
-    if ((vy < 0 && window.scrollY >= max.y) || (vy > 0 && window.scrollY <= 0)) vy = 0;
-    if (!vx && !vy) return;
-  }
-  startInertia(vx, vy, drag.space === 'client' ? inertiaApplyScroll : inertiaApplyField);
+  const vx = clampVelocity(drag.vx), vy = clampVelocity(drag.vy);
+  startInertia(vx, vy, inertiaApplyField);
 }
 
 function bindTouchTarget(e) {
@@ -162,8 +135,10 @@ function cancelSingleDrag() {
 }
 
 function startPinch() {
+  state.pendingTap = null;
   cancelSingleDrag();
   state.drag = { kind: 'pinch' };
+  for (const id of pointers.keys()) { try { board.setPointerCapture(id); } catch (err) {} }
   hooks.renderBoard(); hooks.renderProps();
 }
 
@@ -219,7 +194,6 @@ function onPointerDown(e) {
   bindTouchTarget(e);
   if (state.anim) { hooks.stopAnim(); return; }
   if (e.pointerType === 'touch') {
-    try { board.setPointerCapture(e.pointerId); } catch (err) {}
     pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (pointers.size === 2) { startPinch(); return; }
     if (pointers.size > 2) return;
@@ -267,31 +241,29 @@ function onPointerDown(e) {
   // 空白處用選取工具：開始框選（Shift 或多選模式保留目前的選取）。
   const base = multi ? selIds() : [];
   const hadSel = selIds().length > 0;
-  if (!multi) clearSel();
-  // 觸控且非多選模式：不框選，單指拖曳＝捲動或平移畫面（014 修正：自己接管這個手勢，不再依賴
-  // 瀏覽器原生捲動，避免「先放行捲動、兩指落下才切換成縮放」時與原生捲動手勢互相搶奪造成亂跑／
-  // 跳動；放大時平移畫布，沒放大時捲動整個頁面，上下左右都會回應）。
-  // 016 修正：原本無條件呼叫 renderBoard() 會重寫整個 board.innerHTML，讓手指剛按下的
-  // e.target 在手勢啟動瞬間脫離 DOM（AC-15）。沒有選取物件、且觸控狀態沒有切換時不需要
-  // 重繪（overlay 沒有東西要清，placing class 也沒變），略過即可。
+  // 019 修正：觸控且非多選模式：
+  // - 已放大：建立 kind: 'pan'，平移畫布（drag.space = 'field'）
+  // - 未放大：交給瀏覽器原生捲動，不建立 drag、不呼叫 renderBoard()，記下 pendingTap
   if (state.ui.touch && !multi) {
-    state.drag = { kind: 'pan', last: { x: e.clientX, y: e.clientY } };
-    if (hadSel || prevTouch !== state.ui.touch) { hooks.renderBoard(); hooks.renderProps(); }
+    const bd = bounds();
+    const view = state.view || defaultView(bd);
+    if (zoomLevel(view, bd) > 1) {
+      if (!multi) clearSel();
+      state.drag = { kind: 'pan', last: { x: e.clientX, y: e.clientY } };
+      if (hadSel || prevTouch !== state.ui.touch) { hooks.renderBoard(); hooks.renderProps(); }
+      return;
+    }
+    try { board.releasePointerCapture(e.pointerId); } catch (err) {}
+    state.pendingTap = { id: e.pointerId, x: e.clientX, y: e.clientY, hadSel };
     return;
   }
+  if (!multi) clearSel();
   state.drag = { kind: 'box', start: p, cur: p, base };
   hooks.renderBoard(); hooks.renderProps();
 }
 
-// 單指在空白處拖曳（選取工具、非多選模式）：放大時平移畫布，內容跟著手指；
-// 沒放大時捲動整個頁面。用 getScreenCTM() 的縮放係數換算 client px → 場地單位的位移量，
-// 不用換算座標點（跟 ptRaw 不同，這裡只需要「位移」，不需要「位置」）。
-// 017 修正：手指按住不動時，電容式觸控面板仍會回報 1~2px 的微噪訊 pointermove，若照單
-// 全收呼叫 scrollBy/panBy，每一點點位移都會讓 #board 的 100vh 相關尺寸或 viewBox 重算，
-// 長按時這些微噪訊會被誤認成「正在捲動」而連續觸發（AC-15 問題一、二）。在手勢確認前
-// （drag.confirmed 為 false）先把位移累積在 drag.accX/accY，直到累積距離超過 8px
-// 才視為真的開始捲動／平移；確認後一律套用累積到的位移，不再重新計算門檻，之後每一幀
-// 照常即時套用，不影響慢速但持續的滑動（AC-15 問題二的跟手度）。
+// 單指在空白處拖曳（選取工具、非多選模式、已放大）：平移畫布，內容跟著手指。
+// 017 修正：手指按住不動時的微噪訊 pointermove 先在 drag.accX/accY 累積滿 8px 才啟動平移。
 function panMove(e, drag) {
   let dxClient = e.clientX - drag.last.x, dyClient = e.clientY - drag.last.y;
   drag.last = { x: e.clientX, y: e.clientY };
@@ -312,13 +284,15 @@ function panMove(e, drag) {
     state.view = panBy(view, -dx, -dy, bd);
     hooks.renderView();
     trackVelocity(drag, dx, dy); drag.space = 'field';
-  } else {
-    window.scrollBy(-dxClient, -dyClient);
-    trackVelocity(drag, dxClient, dyClient); drag.space = 'client';
   }
 }
 
 function onPointerMove(e) {
+  if (state.pendingTap && state.pendingTap.id === e.pointerId) {
+    if (Math.hypot(e.clientX - state.pendingTap.x, e.clientY - state.pendingTap.y) >= 8) {
+      state.pendingTap = null;
+    }
+  }
   if (pointers.has(e.pointerId)) {
     pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (state.drag && state.drag.kind === 'pinch') { pinchMove(); return; }
@@ -353,6 +327,13 @@ function onPointerMove(e) {
 
 function endDrag(e) {
   unbindTouchTarget(e);
+  if (state.pendingTap && e && state.pendingTap.id === e.pointerId) {
+    const tap = state.pendingTap;
+    state.pendingTap = null;
+    if (e.type === 'pointerup' && Math.hypot(e.clientX - tap.x, e.clientY - tap.y) < 8) {
+      clearSel(); hooks.renderBoard(); hooks.renderProps();
+    }
+  }
   if (e && pointers.has(e.pointerId)) {
     pointers.delete(e.pointerId);
     if (state.drag && state.drag.kind === 'pinch') {
@@ -373,15 +354,33 @@ function endDrag(e) {
   save();
 }
 
-// CSS 的 touch-action 設為 none（見 css/touch.css），畫布範圍內一律自己接管捲動／縮放
-// （014：不讓瀏覽器原生捲動參與決策，避免它跟兩指縮放互搶造成畫面亂跑／跳動）；
-// 單指在空白處拖曳時 state.drag.kind 是 'pan'，一樣要擋掉原生行為，捲動／平移由 panMove() 處理。
+// 019 修正：手指按下的那一刻決定手勢交給誰。'app' 擋掉原生行為；'native' 交給瀏覽器原生捲動。
+function onTouchStart(e) {
+  const bd = bounds();
+  const view = state.view || defaultView(bd);
+  const zoomed = zoomLevel(view, bd) > 1;
+  const onTarget = Boolean(e.target && e.target.closest && e.target.closest('[data-id],[data-handle]'));
+  const owner = touchOwner({
+    tool: state.ui.tool,
+    multi: state.ui.multi,
+    zoomed,
+    onTarget,
+    touchCount: e.touches ? e.touches.length : 1,
+    animating: Boolean(state.anim),
+  });
+  if (owner === 'app') {
+    e.preventDefault();
+  }
+}
+
+// 單指在空白處拖曳（已放大）：state.drag.kind 是 'pan'，擋掉原生行為，平移由 panMove() 處理。
 function onTouchMove(e) {
   if (state.drag) e.preventDefault();
 }
 
 export function initEditor() {
   board = $('#board');
+  board.addEventListener('touchstart', onTouchStart, { passive: false });
   board.addEventListener('pointerdown', onPointerDown);
   board.addEventListener('pointermove', onPointerMove);
   board.addEventListener('pointerup', endDrag);

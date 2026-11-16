@@ -13,6 +13,8 @@ export const state = {
   anim: null,
   // 005：目前畫布的縮放／平移（viewBox），null＝原尺寸（見 core/viewport.js）。
   view: null,
+  // 019：未放大時點空白處待確認的點擊（若是捲動則取消，抬起手指位移 < 8px 則取消選取）。
+  pendingTap: null,
 };
 export const history = createHistory({ limit: 80 });
 
